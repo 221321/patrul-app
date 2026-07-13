@@ -8,7 +8,8 @@
       "id": "o1",
       "name": "ТД «Мерей», объект №14",
       "address": "пр. Тауке хана, 27",
-      "hasPatrol": true,
+     "hasPatrol": true,
+      "entranceQr": "qr_entrance_o1",
       "checkpoints": [
         { "id": "cp1", "name": "КПП-1, главный вход" },
         { "id": "cp2", "name": "Периметр, северная сторона" },
