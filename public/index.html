@@ -18,6 +18,14 @@
       <input id="loginPin" class="input" type="password" inputmode="numeric" placeholder="PIN-код">
       <button class="btn btn-main" onclick="doLogin()">Войти</button>
       <div id="loginError" class="error-text"></div>
+
+      <!-- ТЕСТ: удалить перед сдачей клиенту -->
+      <div class="dev-login">
+        <div class="dev-login-label">Быстрый вход (тест)</div>
+        <button class="btn dev-btn" onclick="quickLogin('77011234567','1111')">Ерболат (объект с обходом)</button>
+        <button class="btn dev-btn" onclick="quickLogin('77021234567','2222')">Марат (без назначения)</button>
+      </div>
+      <!-- /ТЕСТ -->
     </div>
   </section>
 
