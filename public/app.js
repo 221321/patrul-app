@@ -50,6 +50,7 @@ api('POST', '/api/login', { phone: phone, pin: pin })
       state.guardName = guard.name;
       localStorage.setItem('guardId', guard.id);
       localStorage.setItem('guardName', guard.name);
+      localStorage.setItem('guardRole', guard.role || 'guard');
       if (guard.role === 'manager') {
         window.location.href = '/photos.html';
         return;
@@ -274,7 +275,11 @@ function backToMain() {
 
 // ---------- СТАРТ ----------
 if (state.guardId) {
-  enterMain();
+  if (localStorage.getItem('guardRole') === 'manager') {
+    window.location.href = '/photos.html';
+  } else {
+    enterMain();
+  }
 } else {
   show('screen-login');
 }
