@@ -1,0 +1,33 @@
+{
+  "guards": [
+    { "id": "g1", "name": "Ерболат Ж.", "phone": "77011234567", "pin": "1111" },
+    { "id": "g2", "name": "Марат С.", "phone": "77021234567", "pin": "2222" }
+  ],
+  "objects": [
+    {
+      "id": "o1",
+      "name": "ТД «Мерей», объект №14",
+      "address": "пр. Тауке хана, 27",
+      "hasPatrol": true,
+      "checkpoints": [
+        { "id": "cp1", "name": "КПП-1, главный вход" },
+        { "id": "cp2", "name": "Периметр, северная сторона" },
+        { "id": "cp3", "name": "Складская зона" },
+        { "id": "cp4", "name": "КПП-2, служебный въезд" }
+      ]
+    },
+    {
+      "id": "o2",
+      "name": "Склад «Логит», объект №07",
+      "address": "ул. Промышленная, 4",
+      "hasPatrol": false,
+      "checkpoints": []
+    }
+  ],
+  "assignments": [
+    { "id": "a1", "guardId": "g1", "objectId": "o1", "date": "2026-07-13" }
+  ],
+  "shifts": [],
+  "checkpointScans": [],
+  "photoReports": []
+}

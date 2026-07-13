@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Патруль Р</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ЭКРАН ВХОДА -->
+  <section id="screen-login" class="screen">
+    <div class="login-box">
+      <div class="logo">ПАТРУЛЬ Р</div>
+      <div class="logo-sub">служба охраны</div>
+
+      <input id="loginPhone" class="input" type="tel" inputmode="numeric" placeholder="Номер телефона">
+      <input id="loginPin" class="input" type="password" inputmode="numeric" placeholder="PIN-код">
+      <button class="btn btn-main" onclick="doLogin()">Войти</button>
+      <div id="loginError" class="error-text"></div>
+    </div>
+  </section>
+
+  <!-- ГЛАВНЫЙ ЭКРАН -->
+  <section id="screen-main" class="screen hidden">
+    <div class="topbar">
+      <div class="topbar-name" id="guardName">—</div>
+      <button class="link-btn" onclick="logout()">Выйти</button>
+    </div>
+
+    <div class="object-info" id="objectInfo">
+      <div class="object-name" id="objectName">Объект не назначен</div>
+      <div class="object-address" id="objectAddress"></div>
+    </div>
+
+    <div class="menu">
+      <button class="menu-item" id="btnShift" onclick="toggleShift()">
+        <span class="menu-icon">⏻</span>
+        <span class="menu-text" id="shiftLabel">Начать смену</span>
+      </button>
+
+      <button class="menu-item" id="btnPatrol" onclick="showPatrol()" style="display:none">
+        <span class="menu-icon">▦</span>
+        <span class="menu-text">Обход</span>
+      </button>
+
+      <button class="menu-item" id="btnPhoto" onclick="showPhoto()">
+        <span class="menu-icon">📷</span>
+        <span class="menu-text">Фотоотчёт</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ЭКРАН ОБХОДА -->
+  <section id="screen-patrol" class="screen hidden">
+    <div class="topbar">
+      <button class="link-btn" onclick="backToMain()">← Назад</button>
+    </div>
+    <div class="section-title">Обход по объекту</div>
+    <div class="checkpoint-list" id="checkpointList"></div>
+  </section>
+
+  <!-- ЭКРАН ФОТООТЧЁТА -->
+  <section id="screen-photo" class="screen hidden">
+    <div class="topbar">
+      <button class="link-btn" onclick="backToMain()">← Назад</button>
+    </div>
+    <div class="section-title">Фотоотчёт</div>
+    <div class="photo-hint">Сфотографируйте себя перед началом поста.</div>
+    <button class="btn btn-main" onclick="takePhoto()">Сделать фото</button>
+    <div id="photoStatus" class="photo-status"></div>
+  </section>
+
+<script src="app.js"></script>
+</body>
+</html>
