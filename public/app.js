@@ -178,12 +178,63 @@ function showPhoto() {
 }
 
 function takePhoto() {
-  // Заготовка: реальный доступ к камере подключается через <input type="file" capture="user">
-  // или getUserMedia. Здесь только фиксируем факт отчёта на сервере.
-  api('POST', '/api/photo-report', { guardId: state.guardId, shiftId: state.shift ? state.shift.id : null })
-    .then(function () {
-      document.getElementById('photoStatus').textContent = 'Фото сохранено · ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  // Открывает камеру телефона (input с capture="user" — сразу фронталка)
+  document.getElementById('photoInput').click();
+}
+
+function photoSelected(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+
+  var statusEl = document.getElementById('photoStatus');
+  statusEl.textContent = 'Обработка фото…';
+
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    compressImage(e.target.result, 1024, 0.8, function (compressedBase64) {
+      // превью на экране
+      var preview = document.getElementById('photoPreview');
+      preview.src = compressedBase64;
+      preview.classList.remove('hidden');
+
+      statusEl.textContent = 'Отправка…';
+      api('POST', '/api/photo-report', {
+        guardId: state.guardId,
+        shiftId: state.shift ? state.shift.id : null,
+        imageBase64: compressedBase64
+      })
+        .then(function () {
+          statusEl.textContent = 'Фото сохранено · ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        })
+        .catch(function (err) {
+          statusEl.textContent = 'Ошибка: ' + err.message;
+          statusEl.style.color = '#B23A2E';
+        });
     });
+  };
+  reader.readAsDataURL(file);
+
+  // сброс, чтобы повторное фото с тем же файлом тоже сработало
+  input.value = '';
+}
+
+// Сжатие через canvas: длинная сторона <= maxSide, JPEG с заданным качеством
+function compressImage(dataUrl, maxSide, quality, cb) {
+  var img = new Image();
+  img.onload = function () {
+    var w = img.width;
+    var h = img.height;
+    if (w > maxSide || h > maxSide) {
+      if (w > h) { h = Math.round(h * maxSide / w); w = maxSide; }
+      else { w = Math.round(w * maxSide / h); h = maxSide; }
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    cb(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
 }
 
 function backToMain() {
