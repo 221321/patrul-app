@@ -66,7 +66,12 @@
       <button class="link-btn" onclick="backToMain()">← Назад</button>
     </div>
     <div class="section-title">Фотоотчёт</div>
-    <div class="photo-hint">Сфотографируйте себя перед началом поста.</div>
+    <div class="photo-hint">Сфотографируйте себя перед началом поста — форма, опрятный вид.</div>
+
+    <!-- capture="user" открывает сразу фронтальную камеру, галерею выбрать нельзя -->
+    <input type="file" id="photoInput" accept="image/*" capture="user" style="display:none" onchange="photoSelected(this)">
+
+    <img id="photoPreview" class="photo-preview hidden" alt="">
     <button class="btn btn-main" onclick="takePhoto()">Сделать фото</button>
     <div id="photoStatus" class="photo-status"></div>
   </section>
