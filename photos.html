@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Фотоотчёты — Патруль Р</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .feed-wrap{max-width:900px;margin:0 auto;padding:24px 16px}
+  .feed-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+  .feed-head input[type=date]{
+    padding:10px 12px;font-size:16px;border:1.5px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;
+  }
+  .feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+  .feed-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;
+  }
+  .feed-card img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;cursor:pointer}
+  .feed-meta{padding:10px 12px}
+  .feed-name{font-weight:700;font-size:.95rem}
+  .feed-time{font-size:.82rem;color:var(--muted);margin-top:2px}
+  .feed-empty{color:var(--muted);text-align:center;padding:60px 0;font-size:1.05rem}
+</style>
+</head>
+<body>
+  <div class="feed-wrap">
+    <div class="feed-head">
+      <div class="section-title" style="margin:0">Фотоотчёты</div>
+      <input type="date" id="feedDate" onchange="loadFeed()">
+    </div>
+    <div class="feed-grid" id="feedGrid"></div>
+    <div class="feed-empty hidden" id="feedEmpty">За этот день фотоотчётов нет</div>
+  </div>
+
+<script>
+function loadFeed() {
+  var date = document.getElementById('feedDate').value;
+  fetch('/api/photo-reports?date=' + date)
+    .then(function (r) { return r.json(); })
+    .then(function (reports) {
+      var grid = document.getElementById('feedGrid');
+      var empty = document.getElementById('feedEmpty');
+      grid.innerHTML = '';
+      empty.classList.toggle('hidden', reports.length > 0);
+
+      reports.forEach(function (rep) {
+        var card = document.createElement('div');
+        card.className = 'feed-card';
+
+        var img = document.createElement('img');
+        img.src = rep.file;
+        img.alt = rep.guardName;
+        img.onclick = function () { window.open(rep.file, '_blank'); };
+
+        var meta = document.createElement('div');
+        meta.className = 'feed-meta';
+
+        var name = document.createElement('div');
+        name.className = 'feed-name';
+        name.textContent = rep.guardName;
+
+        var time = document.createElement('div');
+        time.className = 'feed-time';
+        time.textContent = new Date(rep.takenAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+        meta.appendChild(name);
+        meta.appendChild(time);
+        card.appendChild(img);
+        card.appendChild(meta);
+        grid.appendChild(card);
+      });
+    });
+}
+
+// по умолчанию — сегодня
+document.getElementById('feedDate').value = new Date().toISOString().slice(0, 10);
+loadFeed();
+</script>
+</body>
+</html>
