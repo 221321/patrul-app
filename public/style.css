@@ -1,155 +1,152 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  background: #14181A;
-  color: #F2F0EC;
-  min-height: 100vh;
+/* Патруль Р — светлая тема: фарфор / сталь / глубокий синий
+   Строгая спокойная гамма под охранную тематику.
+   Крупные элементы — интерфейс рассчитан в т.ч. на возрастных сотрудников. */
+:root{
+  --bg:#F2F4F5;            /* холодный светлый фон */
+  --panel:#FFFFFF;
+  --ink:#1C2733;           /* глубокий сине-графитовый текст */
+  --muted:#6E7B87;
+  --line:#DDE3E8;
+  --accent:#2C5F8A;        /* стальной синий — основной акцент */
+  --accent-dark:#204767;
+  --accent-soft:#E8F0F7;   /* подложка под акцент */
+  --ok:#2F7D4F;
+  --ok-soft:#E4F2E9;
+  --warn:#B23A2E;
+  --warn-soft:#FBEAE7;
+  --radius:12px;
+  --shadow:0 1px 3px rgba(28,39,51,.08);
+  --shadow-lift:0 4px 14px rgba(28,39,51,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.45;min-height:100vh;
 }
 
-.screen { min-height: 100vh; padding: 28px 20px; }
-.hidden { display: none; }
+.screen{min-height:100vh;padding:24px 16px}
+.hidden{display:none}
 
-/* ---- ВХОД ---- */
-.login-box {
-  max-width: 360px;
-  margin: 18vh auto 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  text-align: center;
+/* ================= ВХОД ================= */
+#screen-login{display:flex;align-items:center;justify-content:center;
+  background:
+    linear-gradient(180deg, #E9EEF2 0%, var(--bg) 45%);
 }
-.logo {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  margin-bottom: 2px;
+#screen-login.hidden{display:none}
+.login-box{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  box-shadow:var(--shadow-lift);padding:36px 30px;width:100%;max-width:380px;
+  display:flex;flex-direction:column;gap:12px;text-align:center;
 }
-.logo-sub {
-  font-size: 15px;
-  color: #9BA3A0;
-  margin-bottom: 24px;
+.logo{
+  font-size:1.8rem;font-weight:800;letter-spacing:.05em;
+  color:var(--ink);
 }
-.input {
-  width: 100%;
-  padding: 16px;
-  font-size: 18px; /* не меньше 16px — иначе iOS зумит при фокусе */
-  border-radius: 12px;
-  border: 1px solid #333A38;
-  background: #1E2422;
-  color: #F2F0EC;
+.logo::first-letter{color:var(--accent)}
+.logo-sub{
+  color:var(--muted);margin:-6px 0 18px;font-size:.85rem;
+  letter-spacing:.16em;text-transform:uppercase;
 }
-.input::placeholder { color: #6B7573; }
+.input{
+  width:100%;padding:14px 16px;
+  font-size:17px; /* >=16px — iOS не зумит при фокусе */
+  border-radius:10px;border:1.5px solid var(--line);
+  background:#FBFCFD;color:var(--ink);font-family:inherit;
+  transition:border-color .15s, background .15s;
+}
+.input::placeholder{color:#9AA6B0}
+.input:focus{outline:none;border-color:var(--accent);background:#fff}
+.error-text{color:var(--warn);font-size:.9rem;min-height:20px}
 
-.error-text {
-  color: #E8452C;
-  font-size: 15px;
-  min-height: 20px;
+/* ================= КНОПКИ ================= */
+.btn{
+  width:100%;padding:16px;font-size:1.1rem;font-weight:700;
+  border-radius:12px;border:none;cursor:pointer;font-family:inherit;
+  background:#E7EBEE;color:var(--ink);
+  transition:background .15s, transform .1s;
 }
+.btn:active{transform:scale(.985)}
+.btn-main{
+  background:var(--accent);color:#fff;
+  box-shadow:0 3px 10px rgba(44,95,138,.28);
+}
+.btn-main:hover{background:var(--accent-dark)}
+.btn:disabled{opacity:.5;cursor:default}
 
-/* ---- КНОПКИ ---- */
-.btn {
-  width: 100%;
-  padding: 18px;
-  font-size: 19px;
-  font-weight: 600;
-  border-radius: 14px;
-  border: none;
-  cursor: pointer;
+.link-btn{
+  background:none;border:none;color:var(--muted);
+  font-size:1rem;cursor:pointer;font-family:inherit;padding:8px 0;
 }
-.btn-main {
-  background: #E8452C;
-  color: #fff;
-}
-.btn-main:active { filter: brightness(.9); }
+.link-btn:hover{color:var(--accent)}
 
-.link-btn {
-  background: none;
-  border: none;
-  color: #9BA3A0;
-  font-size: 17px;
-  cursor: pointer;
+/* ================= ГЛАВНЫЙ ЭКРАН ================= */
+#screen-main,#screen-patrol,#screen-photo{max-width:520px;margin:0 auto}
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:18px;
 }
+.topbar-name{font-size:1.2rem;font-weight:800}
 
-/* ---- ГЛАВНЫЙ ЭКРАН ---- */
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 22px;
+.object-info{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-left:5px solid var(--accent);   /* фирменная деталь — стальная кромка поста */
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:18px 20px;margin-bottom:22px;
 }
-.topbar-name { font-size: 20px; font-weight: 600; }
+.object-name{font-size:1.15rem;font-weight:800;margin-bottom:3px}
+.object-address{font-size:.92rem;color:var(--muted)}
 
-.object-info {
-  background: #1E2422;
-  border: 1px solid #333A38;
-  border-radius: 16px;
-  padding: 18px;
-  margin-bottom: 26px;
+.menu{display:flex;flex-direction:column;gap:14px}
+.menu-item{
+  display:flex;align-items:center;gap:16px;width:100%;
+  padding:22px 20px;font-size:1.2rem;font-weight:700;
+  color:var(--ink);background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);cursor:pointer;text-align:left;font-family:inherit;
+  transition:box-shadow .15s, transform .1s;
 }
-.object-name { font-size: 19px; font-weight: 600; margin-bottom: 4px; }
-.object-address { font-size: 15px; color: #9BA3A0; }
-
-.menu {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-  padding: 22px 20px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #F2F0EC;
-  background: #1E2422;
-  border: 1px solid #333A38;
-  border-radius: 16px;
-  cursor: pointer;
-  text-align: left;
-}
-.menu-item:active { background: #262D2B; }
-.menu-icon { font-size: 24px; width: 28px; text-align: center; }
-
-/* состояние "смена идёт" — кнопка выделяется цветом */
-.menu-item.on {
-  background: #1C3327;
-  border-color: #2E5B44;
-  color: #7ED4A6;
+.menu-item:hover{box-shadow:var(--shadow-lift)}
+.menu-item:active{transform:scale(.99)}
+.menu-icon{
+  font-size:1.25rem;width:46px;height:46px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accent-soft);color:var(--accent);
+  border-radius:12px;
 }
 
-/* ---- ОБХОД ---- */
-.section-title { font-size: 22px; font-weight: 700; margin-bottom: 18px; }
+/* смена идёт — карточка зеленеет целиком, видно с первого взгляда */
+.menu-item.on{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.menu-item.on .menu-icon{background:#fff;color:var(--ok)}
 
-.checkpoint-list { display: flex; flex-direction: column; gap: 12px; }
-.checkpoint-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px;
-  background: #1E2422;
-  border: 1px solid #333A38;
-  border-radius: 14px;
+/* ================= ОБХОД ================= */
+.section-title{font-size:1.35rem;font-weight:800;margin-bottom:16px}
+.checkpoint-list{display:flex;flex-direction:column;gap:12px}
+.checkpoint-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:16px 18px;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
 }
-.checkpoint-item.done { border-color: #2E5B44; background: #1C3327; }
-.checkpoint-name { font-size: 17px; }
-.checkpoint-time { font-size: 14px; color: #9BA3A0; margin-top: 3px; }
-.checkpoint-btn {
-  flex-shrink: 0;
-  padding: 12px 18px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 10px;
-  border: none;
-  background: #E8452C;
-  color: #fff;
-  cursor: pointer;
+.checkpoint-item.done{background:var(--ok-soft);border-color:#BFE0CC}
+.checkpoint-name{font-size:1.02rem;font-weight:700}
+.checkpoint-time{font-size:.84rem;color:var(--muted);margin-top:2px}
+.checkpoint-item.done .checkpoint-time{color:var(--ok);font-weight:600}
+.checkpoint-btn{
+  flex-shrink:0;padding:12px 18px;font-size:.95rem;font-weight:700;
+  border-radius:10px;border:none;cursor:pointer;font-family:inherit;
+  background:var(--accent);color:#fff;
 }
-.checkpoint-item.done .checkpoint-btn { background: #4CAF7D; color: #0c1a13; }
+.checkpoint-btn:hover{background:var(--accent-dark)}
+.checkpoint-item.done .checkpoint-btn{background:var(--ok);color:#fff;cursor:default}
+.checkpoint-btn:disabled{opacity:.9}
 
-/* ---- ФОТООТЧЁТ ---- */
-.photo-hint { font-size: 16px; color: #9BA3A0; margin-bottom: 20px; }
-.photo-status { margin-top: 16px; font-size: 16px; color: #4CAF7D; }
+/* ================= ФОТООТЧЁТ ================= */
+.photo-hint{font-size:1rem;color:var(--muted);margin-bottom:18px}
+.photo-status{margin-top:16px;font-size:1rem;color:var(--ok);font-weight:700}
+
+/* ================= ДЕСКТОП ================= */
+@media (min-width:760px){
+  .screen{padding:48px 24px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
