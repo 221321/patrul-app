@@ -32,7 +32,7 @@ app.post('/api/login', (req, res) => {
   if (!guard) {
     return res.status(401).json({ error: 'Неверный телефон или PIN' });
   }
-  res.json({ id: guard.id, name: guard.name });
+  res.json({ id: guard.id, name: guard.name, role: guard.role || 'guard' });
 });
 
 // ---------- СЕГОДНЯШНЕЕ НАЗНАЧЕНИЕ ----------
