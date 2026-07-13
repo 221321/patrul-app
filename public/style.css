@@ -144,6 +144,12 @@ body{
 /* ================= ФОТООТЧЁТ ================= */
 .photo-hint{font-size:1rem;color:var(--muted);margin-bottom:18px}
 .photo-status{margin-top:16px;font-size:1rem;color:var(--ok);font-weight:700}
+.photo-preview{
+  width:100%;max-width:320px;border-radius:var(--radius);
+  border:1px solid var(--line);box-shadow:var(--shadow);
+  display:block;margin:0 auto 16px;
+}
+.photo-preview.hidden{display:none}
 
 /* ================= ДЕСКТОП ================= */
 @media (min-width:760px){
