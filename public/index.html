@@ -59,6 +59,16 @@
     </div>
   </section>
 
+  <!-- ЭКРАН СКАНА ПРИ НАЧАЛЕ/КОНЦЕ СМЕНЫ -->
+  <section id="screen-entrance-scan" class="screen hidden">
+    <div class="topbar">
+      <button class="link-btn" onclick="cancelEntranceScan()">← Отмена</button>
+    </div>
+    <div class="section-title" id="entranceTitle">Отсканируйте QR на входе</div>
+    <div class="photo-hint">Наведите камеру на QR-код у входа на объект.</div>
+    <button class="btn btn-main" onclick="confirmEntranceScan()">Сканировать</button>
+  </section>
+
   <!-- ЭКРАН ОБХОДА -->
   <section id="screen-patrol" class="screen hidden">
     <div class="topbar">
