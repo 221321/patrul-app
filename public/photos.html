@@ -6,73 +6,203 @@
 <title>Фотоотчёты — Патруль Р</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  .feed-wrap{max-width:900px;margin:0 auto;padding:24px 16px}
-  .feed-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-  .feed-head input[type=date]{
+  .feed-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
+  .feed-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .feed-topbar-name{font-size:1.2rem;font-weight:800}
+  .feed-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+  .feed-controls input[type=date],.feed-controls input[type=search]{
     padding:10px 12px;font-size:16px;border:1.5px solid var(--line);
     border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;
   }
-  .feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+  .feed-controls input[type=search]{flex:1;min-width:180px}
+  .feed-count{color:var(--muted);font-size:.92rem;margin-bottom:14px}
+  .feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
   .feed-card{
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-    box-shadow:var(--shadow);overflow:hidden;
+    box-shadow:var(--shadow);overflow:hidden;cursor:pointer;
+    transition:box-shadow .15s, transform .1s;
   }
-  .feed-card img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;cursor:pointer}
+  .feed-card:hover{box-shadow:var(--shadow-lift)}
+  .feed-card:active{transform:scale(.98)}
+  .feed-card img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
   .feed-meta{padding:10px 12px}
   .feed-name{font-weight:700;font-size:.95rem}
   .feed-time{font-size:.82rem;color:var(--muted);margin-top:2px}
   .feed-empty{color:var(--muted);text-align:center;padding:60px 0;font-size:1.05rem}
+  .hidden{display:none}
+
+  .lightbox{
+    position:fixed;inset:0;background:rgba(20,26,32,.9);
+    display:flex;align-items:center;justify-content:center;
+    z-index:1000;padding:24px;
+  }
+  .lightbox img{max-width:100%;max-height:80vh;border-radius:10px;display:block}
+  .lightbox-caption{color:#fff;text-align:center;margin-top:14px;font-size:1rem}
+  .lightbox-caption .name{font-weight:700}
+  .lightbox-close{
+    position:absolute;top:18px;right:22px;color:#fff;font-size:2rem;
+    background:none;border:none;cursor:pointer;line-height:1;font-family:inherit;
+  }
+  .lightbox-nav{
+    position:absolute;top:50%;transform:translateY(-50%);
+    background:rgba(255,255,255,.12);border:none;color:#fff;
+    width:48px;height:48px;border-radius:50%;font-size:1.4rem;cursor:pointer;
+  }
+  .lightbox-prev{left:18px}
+  .lightbox-next{right:18px}
 </style>
 </head>
 <body>
   <div class="feed-wrap">
-    <div class="feed-head">
-      <div class="section-title" style="margin:0">Фотоотчёты</div>
-      <input type="date" id="feedDate" onchange="loadFeed()">
+    <div class="feed-topbar">
+      <div class="feed-topbar-name">Фотоотчёты</div>
+      <button class="link-btn" onclick="goHome()">Выйти</button>
     </div>
+
+    <div class="feed-controls">
+      <input type="date" id="feedDate" onchange="loadFeed()">
+      <input type="search" id="feedSearch" placeholder="Поиск по имени сотрудника…" oninput="renderGrid()">
+    </div>
+
+    <div class="feed-count" id="feedCount"></div>
     <div class="feed-grid" id="feedGrid"></div>
     <div class="feed-empty hidden" id="feedEmpty">За этот день фотоотчётов нет</div>
   </div>
 
 <script>
+var allReports = [];
+
+function goHome() {
+  localStorage.removeItem('guardId');
+  localStorage.removeItem('guardName');
+  localStorage.removeItem('guardRole');
+  window.location.href = '/';
+}
+
 function loadFeed() {
   var date = document.getElementById('feedDate').value;
   fetch('/api/photo-reports?date=' + date)
     .then(function (r) { return r.json(); })
     .then(function (reports) {
-      var grid = document.getElementById('feedGrid');
-      var empty = document.getElementById('feedEmpty');
-      grid.innerHTML = '';
-      empty.classList.toggle('hidden', reports.length > 0);
-
-      reports.forEach(function (rep) {
-        var card = document.createElement('div');
-        card.className = 'feed-card';
-
-        var img = document.createElement('img');
-        img.src = rep.file;
-        img.alt = rep.guardName;
-        img.onclick = function () { window.open(rep.file, '_blank'); };
-
-        var meta = document.createElement('div');
-        meta.className = 'feed-meta';
-
-        var name = document.createElement('div');
-        name.className = 'feed-name';
-        name.textContent = rep.guardName;
-
-        var time = document.createElement('div');
-        time.className = 'feed-time';
-        time.textContent = new Date(rep.takenAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-        meta.appendChild(name);
-        meta.appendChild(time);
-        card.appendChild(img);
-        card.appendChild(meta);
-        grid.appendChild(card);
-      });
+      allReports = reports;
+      renderGrid();
     });
 }
+
+function renderGrid() {
+  var query = document.getElementById('feedSearch').value.trim().toLowerCase();
+  var grid = document.getElementById('feedGrid');
+  var empty = document.getElementById('feedEmpty');
+  var countEl = document.getElementById('feedCount');
+
+  var filtered = query
+    ? allReports.filter(function (r) { return r.guardName.toLowerCase().indexOf(query) !== -1; })
+    : allReports;
+
+  grid.innerHTML = '';
+  empty.classList.toggle('hidden', filtered.length > 0);
+  countEl.textContent = allReports.length
+    ? 'Показано ' + filtered.length + ' из ' + allReports.length
+    : '';
+
+  filtered.forEach(function (rep, idx) {
+    var card = document.createElement('div');
+    card.className = 'feed-card';
+    card.onclick = function () { openLightbox(filtered, idx); };
+
+    var img = document.createElement('img');
+    img.src = rep.file;
+    img.alt = rep.guardName;
+    img.loading = 'lazy';
+
+    var meta = document.createElement('div');
+    meta.className = 'feed-meta';
+    var name = document.createElement('div');
+    name.className = 'feed-name';
+    name.textContent = rep.guardName;
+    var time = document.createElement('div');
+    time.className = 'feed-time';
+    time.textContent = new Date(rep.takenAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+    meta.appendChild(name);
+    meta.appendChild(time);
+    card.appendChild(img);
+    card.appendChild(meta);
+    grid.appendChild(card);
+  });
+}
+
+var lightboxList = [];
+var lightboxIndex = 0;
+
+function openLightbox(list, index) {
+  lightboxList = list;
+  lightboxIndex = index;
+  renderLightbox();
+}
+
+function renderLightbox() {
+  var rep = lightboxList[lightboxIndex];
+  if (!rep) return;
+
+  var existing = document.getElementById('lightbox');
+  if (existing) existing.remove();
+
+  var box = document.createElement('div');
+  box.className = 'lightbox';
+  box.id = 'lightbox';
+  box.onclick = function (e) { if (e.target === box) closeLightbox(); };
+
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'lightbox-close';
+  closeBtn.innerHTML = '&times;';
+  closeBtn.onclick = closeLightbox;
+
+  var img = document.createElement('img');
+  img.src = rep.file;
+  img.alt = rep.guardName;
+
+  var caption = document.createElement('div');
+  caption.className = 'lightbox-caption';
+  var timeStr = new Date(rep.takenAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  caption.innerHTML = '<span class="name">' + rep.guardName + '</span> · ' + timeStr +
+    ' · ' + (lightboxIndex + 1) + ' из ' + lightboxList.length;
+
+  var content = document.createElement('div');
+  content.appendChild(img);
+  content.appendChild(caption);
+  box.appendChild(content);
+  box.appendChild(closeBtn);
+
+  if (lightboxIndex > 0) {
+    var prevBtn = document.createElement('button');
+    prevBtn.className = 'lightbox-nav lightbox-prev';
+    prevBtn.innerHTML = '&#8592;';
+    prevBtn.onclick = function (e) { e.stopPropagation(); lightboxIndex--; renderLightbox(); };
+    box.appendChild(prevBtn);
+  }
+  if (lightboxIndex < lightboxList.length - 1) {
+    var nextBtn = document.createElement('button');
+    nextBtn.className = 'lightbox-nav lightbox-next';
+    nextBtn.innerHTML = '&#8594;';
+    nextBtn.onclick = function (e) { e.stopPropagation(); lightboxIndex++; renderLightbox(); };
+    box.appendChild(nextBtn);
+  }
+
+  document.body.appendChild(box);
+}
+
+function closeLightbox() {
+  var existing = document.getElementById('lightbox');
+  if (existing) existing.remove();
+}
+
+document.addEventListener('keydown', function (e) {
+  if (!document.getElementById('lightbox')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft' && lightboxIndex > 0) { lightboxIndex--; renderLightbox(); }
+  if (e.key === 'ArrowRight' && lightboxIndex < lightboxList.length - 1) { lightboxIndex++; renderLightbox(); }
+});
 
 document.getElementById('feedDate').value = new Date().toISOString().slice(0, 10);
 loadFeed();
