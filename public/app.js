@@ -8,7 +8,7 @@ var state = {
 };
 
 function show(id) {
-  var screens = ['screen-login', 'screen-main', 'screen-patrol', 'screen-photo'];
+  var screens = ['screen-login', 'screen-main', 'screen-entrance-scan', 'screen-patrol', 'screen-photo'];
   for (var i = 0; i < screens.length; i++) {
     document.getElementById(screens[i]).classList.add('hidden');
   }
@@ -44,12 +44,16 @@ function loginWith(phone, pin) {
   var errBox = document.getElementById('loginError');
   errBox.textContent = '';
 
-  api('POST', '/api/login', { phone: phone, pin: pin })
+api('POST', '/api/login', { phone: phone, pin: pin })
     .then(function (guard) {
       state.guardId = guard.id;
       state.guardName = guard.name;
       localStorage.setItem('guardId', guard.id);
       localStorage.setItem('guardName', guard.name);
+      if (guard.role === 'manager') {
+        window.location.href = '/photos.html';
+        return;
+      }
       enterMain();
     })
     .catch(function (e) {
@@ -105,23 +109,40 @@ function renderMain() {
 }
 
 // ---------- СМЕНА ----------
+var pendingShiftAction = null; // 'start' | 'end'
+
 function toggleShift() {
   if (!state.object) {
     alert('Сначала нужно назначение на объект.');
     return;
   }
   var onShift = state.shift && !state.shift.endedAt;
+  pendingShiftAction = onShift ? 'end' : 'start';
+  document.getElementById('entranceTitle').textContent =
+    onShift ? 'Отсканируйте QR на входе — конец смены' : 'Отсканируйте QR на входе — начало смены';
+  show('screen-entrance-scan');
+}
 
-  if (!onShift) {
+function cancelEntranceScan() {
+  pendingShiftAction = null;
+  show('screen-main');
+}
+
+function confirmEntranceScan() {
+  if (pendingShiftAction === 'start') {
     api('POST', '/api/shift/start', { guardId: state.guardId, objectId: state.object.id })
       .then(function (shift) {
         state.shift = shift;
+        pendingShiftAction = null;
+        show('screen-main');
         renderMain();
       });
-  } else {
+  } else if (pendingShiftAction === 'end') {
     api('POST', '/api/shift/end', { shiftId: state.shift.id })
       .then(function () {
+        pendingShiftAction = null;
         loadToday();
+        show('screen-main');
       });
   }
 }
