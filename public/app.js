@@ -32,6 +32,15 @@ function api(method, url, body) {
 function doLogin() {
   var phone = document.getElementById('loginPhone').value.trim();
   var pin = document.getElementById('loginPin').value.trim();
+  loginWith(phone, pin);
+}
+
+// ТЕСТ: удалить перед сдачей клиенту
+function quickLogin(phone, pin) {
+  loginWith(phone, pin);
+}
+
+function loginWith(phone, pin) {
   var errBox = document.getElementById('loginError');
   errBox.textContent = '';
 
