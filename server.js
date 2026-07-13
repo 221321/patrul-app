@@ -126,21 +126,60 @@ app.post('/api/checkpoint/scan', (req, res) => {
 });
 
 // ---------- ФОТООТЧЁТ ----------
-// Заготовка: принимает фото в base64 и просто сохраняет метаданные + сам файл на диск.
-// Для продакшна лучше сразу писать в отдельную папку /uploads с очисткой старых файлов.
+const fs = require('fs');
+const UPLOADS_DIR = path.join(__dirname, 'uploads', 'photos');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Приём фото: base64 (jpeg, уже сжатый на клиенте) + метаданные
 app.post('/api/photo-report', (req, res) => {
-  const { guardId, shiftId } = req.body || {};
-  if (!guardId) {
-    return res.status(400).json({ error: 'guardId обязателен' });
+  const { guardId, shiftId, imageBase64 } = req.body || {};
+  if (!guardId || !imageBase64) {
+    return res.status(400).json({ error: 'guardId и imageBase64 обязательны' });
   }
+
+  // убираем префикс data:image/jpeg;base64, если есть
+  const raw = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+  const buf = Buffer.from(raw, 'base64');
+
+  // защита от слишком тяжёлых файлов (клиент сжимает, но на всякий случай)
+  if (buf.length > 3 * 1024 * 1024) {
+    return res.status(413).json({ error: 'Фото слишком большое' });
+  }
+
+  const id = 'p_' + Date.now();
+  const fileName = id + '.jpg';
+  fs.writeFileSync(path.join(UPLOADS_DIR, fileName), buf);
+
   const report = {
-    id: 'p_' + Date.now(),
+    id,
     guardId,
     shiftId: shiftId || null,
+    file: '/uploads/photos/' + fileName,
     takenAt: new Date().toISOString()
   };
   db.get('photoReports').push(report).write();
   res.json(report);
+});
+
+// Лента фотоотчётов для менеджера: ?date=2026-07-13 (по умолчанию сегодня)
+app.get('/api/photo-reports', (req, res) => {
+  const date = req.query.date || today();
+  const guards = db.get('guards').value();
+  const reports = db.get('photoReports')
+    .filter((r) => r.takenAt.slice(0, 10) === date)
+    .value()
+    .map((r) => {
+      const guard = guards.find((g) => g.id === r.guardId);
+      return {
+        id: r.id,
+        guardName: guard ? guard.name : r.guardId,
+        file: r.file,
+        takenAt: r.takenAt
+      };
+    })
+    .sort((a, b) => b.takenAt.localeCompare(a.takenAt));
+  res.json(reports);
 });
 
 const PORT = process.env.PORT || 3000;
