@@ -165,3 +165,47 @@ body{
   .screen{padding:48px 24px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ================= АДАПТИВНАЯ НАВИГАЦИЯ (разделы менеджера) ================= */
+.site-topbar{position:relative}
+.site-nav-toggle{
+  display:none;background:#fff;border:1.5px solid var(--line);border-radius:8px;
+  font-size:1.2rem;line-height:1;padding:8px 12px;cursor:pointer;color:var(--ink);font-family:inherit;
+}
+.site-nav{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.site-nav a{color:var(--muted);text-decoration:none;font-size:.95rem;white-space:nowrap}
+.site-nav a:hover{color:var(--accent)}
+
+@media (max-width:820px){
+  .site-nav-toggle{display:block}
+  .site-nav{
+    display:none;position:absolute;top:calc(100% + 8px);right:0;left:auto;
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow-lift);flex-direction:column;align-items:stretch;
+    padding:8px;gap:0;min-width:210px;z-index:100;
+  }
+  .site-nav.open{display:flex}
+  .site-nav a{
+    padding:12px 14px;border-radius:8px;width:100%;text-align:left;font-size:1rem;white-space:normal;
+  }
+  .site-nav a:hover{background:var(--accent-soft)}
+}
+
+/* ================= ТАБЛИЦЫ НА УЗКИХ ЭКРАНАХ ================= */
+.table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius)}
+.table-scroll .emp-table{box-shadow:none;border-radius:0}
+@media (max-width:700px){
+  .table-scroll{box-shadow:var(--shadow);border:1px solid var(--line);border-radius:var(--radius)}
+  .table-scroll .emp-table{border:none;min-width:640px}
+}
+
+/* ================= ОБЩИЕ КОНТЕЙНЕРЫ РАЗДЕЛОВ МЕНЕДЖЕРА ================= */
+@media (max-width:480px){
+  .emp-wrap,.dash-wrap,.feed-wrap{padding:16px 12px}
+  .emp-topbar-name,.dash-topbar-name,.feed-topbar-name{font-size:1.05rem}
+  .emp-controls,.ts-controls,.feed-controls{margin:14px 0}
+  .emp-panel{padding:22px 18px}
+}
+@media (min-width:1100px){
+  .emp-wrap,.dash-wrap,.feed-wrap{max-width:1200px}
+}
