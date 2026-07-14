@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Обходы — Патруль Р</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .emp-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
+  .emp-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px}
+  .emp-topbar-name{font-size:1.2rem;font-weight:800}
+  .emp-nav{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .emp-nav a{color:var(--muted);text-decoration:none;font-size:.95rem}
+  .emp-nav a:hover{color:var(--accent)}
+  .emp-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}
+  .emp-controls input[type=date],.emp-controls input[type=search]{
+    padding:10px 12px;font-size:16px;border:1.5px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;
+  }
+  .emp-controls input[type=search]{flex:1;min-width:200px}
+  .emp-count{color:var(--muted);font-size:.9rem;margin-bottom:12px}
+
+  .emp-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .emp-table th{text-align:left;font-size:.82rem;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;padding:12px 14px;border-bottom:1px solid var(--line);background:#FAFBFC}
+  .emp-table td{padding:12px 14px;border-bottom:1px solid var(--line);font-size:.95rem;vertical-align:top}
+  .emp-table tr:last-child td{border-bottom:none}
+  .emp-empty{color:var(--muted);text-align:center;padding:50px 0}
+
+  .pat-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700}
+  .pat-badge.full{background:var(--ok-soft);color:var(--ok)}
+  .pat-badge.partial{background:var(--warn-soft);color:var(--warn)}
+  .pat-badge.none{background:#EEF0F2;color:var(--muted)}
+  .pat-icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;
+    padding:4px 8px;border-radius:6px;font-family:inherit}
+  .pat-icon-btn:hover{background:var(--accent-soft);color:var(--accent)}
+  .pat-detail-row td{background:#FAFBFC;padding:14px 18px}
+  .pat-cp-list{display:flex;flex-direction:column;gap:6px}
+  .pat-cp-item{display:flex;justify-content:space-between;font-size:.9rem;padding:4px 0}
+  .pat-cp-item .name{color:var(--ink)}
+  .pat-cp-item .time{color:var(--ok);font-weight:600}
+  .pat-cp-item.missed .time{color:var(--warn);font-weight:600}
+</style>
+</head>
+<body>
+  <div class="emp-wrap">
+    <div class="emp-topbar">
+      <div class="emp-topbar-name">История обходов</div>
+      <div class="emp-nav">
+        <a href="/photos.html">Фотоотчёты</a>
+        <a href="/employees.html">Сотрудники</a>
+        <a href="/contractors.html">Контрагенты</a>
+        <a href="/objects.html">Объекты</a>
+        <a href="/assignments.html">Смены</a>
+        <a href="#" onclick="goHome();return false;">Выйти</a>
+      </div>
+    </div>
+
+    <div class="emp-controls">
+      <input type="date" id="patDate" onchange="loadData()">
+      <input type="search" id="patSearch" placeholder="Поиск по сотруднику или объекту…" oninput="renderTable()">
+    </div>
+
+    <div class="emp-count" id="patCount"></div>
+    <table class="emp-table" id="patTable">
+      <thead>
+        <tr>
+          <th>Сотрудник</th>
+          <th>Объект</th>
+          <th>Начало</th>
+          <th>Конец</th>
+          <th>Обход</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="patTbody"></tbody>
+    </table>
+    <div class="emp-empty hidden" id="patEmpty">За эту дату обходов нет</div>
+  </div>
+
+<script>
+var allSummary = [];
+var expandedId = null;
+
+function goHome() {
+  localStorage.removeItem('guardId');
+  localStorage.removeItem('guardName');
+  localStorage.removeItem('guardRole');
+  window.location.href = '/';
+}
+
+function currentDate() {
+  return document.getElementById('patDate').value;
+}
+
+function loadData() {
+  fetch('/api/patrol-summary?date=' + currentDate())
+    .then(function (r) { return r.json(); })
+    .then(function (list) {
+      allSummary = list;
+      renderTable();
+    });
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderTable() {
+  var query = document.getElementById('patSearch').value.trim().toLowerCase();
+  var tbody = document.getElementById('patTbody');
+  var empty = document.getElementById('patEmpty');
+  var countEl = document.getElementById('patCount');
+  var table = document.getElementById('patTable');
+
+  var filtered = query
+    ? allSummary.filter(function (s) {
+        return s.guardName.toLowerCase().indexOf(query) !== -1 || s.objectName.toLowerCase().indexOf(query) !== -1;
+      })
+    : allSummary;
+
+  countEl.textContent = allSummary.length
+    ? 'Показано ' + filtered.length + ' из ' + allSummary.length
+    : '';
+
+  tbody.innerHTML = '';
+  var hasResults = filtered.length > 0;
+  table.classList.toggle('hidden', !hasResults);
+  empty.classList.toggle('hidden', hasResults);
+
+  filtered.forEach(function (s) {
+    var tr = document.createElement('tr');
+
+    var tdGuard = document.createElement('td');
+    tdGuard.textContent = s.guardName;
+
+    var tdObject = document.createElement('td');
+    tdObject.textContent = s.objectName;
+
+    var tdStart = document.createElement('td');
+    tdStart.textContent = fmtTime(s.startedAt);
+
+    var tdEnd = document.createElement('td');
+    tdEnd.textContent = fmtTime(s.endedAt);
+
+    var tdPatrol = document.createElement('td');
+    var badge = document.createElement('span');
+    var cls = s.checkpointsDone === 0 ? 'none' : (s.checkpointsDone === s.checkpointsTotal ? 'full' : 'partial');
+    badge.className = 'pat-badge ' + cls;
+    badge.textContent = s.checkpointsDone + ' из ' + s.checkpointsTotal;
+    tdPatrol.appendChild(badge);
+
+    var tdActions = document.createElement('td');
+    var toggleBtn = document.createElement('button');
+    toggleBtn.className = 'pat-icon-btn';
+    toggleBtn.textContent = expandedId === s.shiftId ? 'Скрыть' : 'Подробнее';
+    toggleBtn.onclick = function () {
+      expandedId = expandedId === s.shiftId ? null : s.shiftId;
+      renderTable();
+    };
+    tdActions.appendChild(toggleBtn);
+
+    tr.appendChild(tdGuard);
+    tr.appendChild(tdObject);
+    tr.appendChild(tdStart);
+    tr.appendChild(tdEnd);
+    tr.appendChild(tdPatrol);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+
+    if (expandedId === s.shiftId) {
+      var detailTr = document.createElement('tr');
+      detailTr.className = 'pat-detail-row';
+      var detailTd = document.createElement('td');
+      detailTd.colSpan = 6;
+
+      var list = document.createElement('div');
+      list.className = 'pat-cp-list';
+      s.checkpoints.forEach(function (cp) {
+        var item = document.createElement('div');
+        item.className = 'pat-cp-item' + (cp.scannedAt ? '' : ' missed');
+        var name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = cp.name;
+        var time = document.createElement('span');
+        time.className = 'time';
+        time.textContent = cp.scannedAt ? fmtTime(cp.scannedAt) : 'не отмечено';
+        item.appendChild(name);
+        item.appendChild(time);
+        list.appendChild(item);
+      });
+
+      detailTd.appendChild(list);
+      detailTr.appendChild(detailTd);
+      tbody.appendChild(detailTr);
+    }
+  });
+}
+
+document.getElementById('patDate').value = new Date().toISOString().slice(0, 10);
+loadData();
+</script>
+</body>
+</html>
