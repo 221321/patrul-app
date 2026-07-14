@@ -45,9 +45,10 @@
 </head>
 <body>
   <div class="emp-wrap">
-    <div class="emp-topbar">
+    <div class="emp-topbar site-topbar">
       <div class="emp-topbar-name">История обходов</div>
-      <div class="emp-nav">
+      <button class="site-nav-toggle" id="navToggle" onclick="toggleNav()">☰</button>
+      <div class="site-nav" id="siteNav">
         <a href="/dashboard.html">Сводка</a>
         <a href="/photos.html">Фотоотчёты</a>
         <a href="/employees.html">Сотрудники</a>
@@ -65,6 +66,7 @@
     </div>
 
     <div class="emp-count" id="patCount"></div>
+    <div class="table-scroll">
     <table class="emp-table" id="patTable">
       <thead>
         <tr>
@@ -78,6 +80,7 @@
       </thead>
       <tbody id="patTbody"></tbody>
     </table>
+    </div>
     <div class="emp-empty hidden" id="patEmpty">За эту дату обходов нет</div>
   </div>
 
@@ -91,6 +94,18 @@ function goHome() {
   localStorage.removeItem('guardRole');
   window.location.href = '/';
 }
+
+function toggleNav() {
+  var nav = document.getElementById('siteNav');
+  if (nav) nav.classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+  var nav = document.getElementById('siteNav');
+  var toggle = document.getElementById('navToggle');
+  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && e.target !== toggle) {
+    nav.classList.remove('open');
+  }
+});
 
 function currentDate() {
   return document.getElementById('patDate').value;
