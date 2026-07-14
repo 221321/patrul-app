@@ -68,6 +68,7 @@
         <a href="/objects.html">Объекты</a>
         <a href="/assignments.html">Смены</a>
         <a href="/patrols.html">Обходы</a>
+        <a href="/timesheet.html">Табель / ЗП</a>
         <a href="#" onclick="goHome();return false;">Выйти</a>
       </div>
     </div>
@@ -84,6 +85,7 @@
           <th>ФИО</th>
           <th>Телефон</th>
           <th>Должность</th>
+          <th>Оплата/смена</th>
           <th>Роль</th>
           <th>Статус</th>
           <th></th>
@@ -148,6 +150,9 @@ function renderTable() {
     var tdPosition = document.createElement('td');
     tdPosition.textContent = emp.position;
 
+    var tdRate = document.createElement('td');
+    tdRate.textContent = emp.shiftRate ? Number(emp.shiftRate).toLocaleString('ru-RU') + ' ₸' : '—';
+
     var tdRole = document.createElement('td');
     tdRole.textContent = emp.role === 'manager' ? 'Менеджер' : 'Охранник';
 
@@ -185,6 +190,7 @@ function renderTable() {
     tr.appendChild(tdName);
     tr.appendChild(tdPhone);
     tr.appendChild(tdPosition);
+    tr.appendChild(tdRate);
     tr.appendChild(tdRole);
     tr.appendChild(tdStatus);
     tr.appendChild(tdActions);
@@ -227,6 +233,7 @@ function openForm(emp) {
     '<div class="emp-field"><label>Телефон</label><input id="fPhone" type="tel" value="' + (emp ? escapeAttr(emp.phone) : '') + '"></div>' +
     '<div class="emp-field"><label>PIN-код' + (emp ? ' (оставьте пустым, чтобы не менять)' : '') + '</label><input id="fPin" type="text" inputmode="numeric"></div>' +
     '<div class="emp-field"><label>Должность</label><input id="fPosition" type="text" value="' + (emp ? escapeAttr(emp.position) : 'Охранник') + '"></div>' +
+    '<div class="emp-field"><label>Оплата за смену (₸)</label><input id="fShiftRate" type="number" min="0" step="500" value="' + (emp ? (emp.shiftRate || 0) : '0') + '"></div>' +
     '<div class="emp-field"><label>Роль в системе</label><select id="fRole">' +
       '<option value="guard"' + (emp && emp.role === 'manager' ? '' : ' selected') + '>Охранник</option>' +
       '<option value="manager"' + (emp && emp.role === 'manager' ? ' selected' : '') + '>Менеджер</option>' +
@@ -257,6 +264,7 @@ function saveForm() {
   var phone = document.getElementById('fPhone').value.trim();
   var pin = document.getElementById('fPin').value.trim();
   var position = document.getElementById('fPosition').value.trim();
+  var shiftRate = document.getElementById('fShiftRate').value;
   var role = document.getElementById('fRole').value;
   var official = document.getElementById('fOfficial').checked;
   var errBox = document.getElementById('fError');
@@ -268,7 +276,7 @@ function saveForm() {
   }
 
   if (editingId) {
-    var body = { name: name, phone: phone, position: position, role: role, official: official };
+    var body = { name: name, phone: phone, position: position, shiftRate: shiftRate, role: role, official: official };
     if (pin) body.pin = pin;
     fetch('/api/employees/' + editingId, {
       method: 'PUT',
@@ -289,7 +297,7 @@ function saveForm() {
     fetch('/api/employees', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, phone: phone, pin: pin, position: position, role: role, official: official })
+      body: JSON.stringify({ name: name, phone: phone, pin: pin, position: position, shiftRate: shiftRate, role: role, official: official })
     })
       .then(function (r) {
         if (!r.ok) return r.json().then(function (e) { throw new Error(e.error); });
