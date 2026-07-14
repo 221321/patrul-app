@@ -38,6 +38,50 @@ app.post('/api/login', (req, res) => {
   res.json({ id: guard.id, name: guard.name, role: guard.role || 'guard' });
 });
 
+// ---------- КОНТРАГЕНТЫ (КОМПАНИИ-ЗАКАЗЧИКИ) ----------
+if (!db.has('contractors').value()) {
+  db.set('contractors', []).write();
+}
+
+app.get('/api/contractors', (req, res) => {
+  res.json(db.get('contractors').value());
+});
+
+app.post('/api/contractors', (req, res) => {
+  const { name, bin, address, contactName, contactPhone } = req.body || {};
+  if (!name) {
+    return res.status(400).json({ error: 'Название компании обязательно' });
+  }
+  const contractor = {
+    id: 'k_' + Date.now(),
+    name,
+    bin: bin || '',
+    address: address || '',
+    contactName: contactName || '',
+    contactPhone: contactPhone || '',
+    active: true
+  };
+  db.get('contractors').push(contractor).write();
+  res.json(contractor);
+});
+
+app.put('/api/contractors/:id', (req, res) => {
+  const { id } = req.params;
+  const contractor = db.get('contractors').find({ id }).value();
+  if (!contractor) {
+    return res.status(404).json({ error: 'Контрагент не найден' });
+  }
+  const { name, bin, address, contactName, contactPhone, active } = req.body || {};
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (bin !== undefined) updates.bin = bin;
+  if (address !== undefined) updates.address = address;
+  if (contactName !== undefined) updates.contactName = contactName;
+  if (contactPhone !== undefined) updates.contactPhone = contactPhone;
+  if (active !== undefined) updates.active = !!active;
+  db.get('contractors').find({ id }).assign(updates).write();
+  res.json(db.get('contractors').find({ id }).value());
+});
 // ---------- СЕГОДНЯШНЕЕ НАЗНАЧЕНИЕ ----------
 // ---------- СОТРУДНИКИ (КАДРЫ) ----------
 app.get('/api/employees', (req, res) => {
