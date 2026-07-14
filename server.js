@@ -88,7 +88,7 @@ app.get('/api/objects', (req, res) => {
 });
 
 app.post('/api/objects', (req, res) => {
-  const { name, address, contractorId, hasPatrol } = req.body || {};
+  const { name, address, contractorId, hasPatrol, contractorRate } = req.body || {};
   if (!name) {
     return res.status(400).json({ error: 'Название объекта обязательно' });
   }
@@ -98,6 +98,7 @@ app.post('/api/objects', (req, res) => {
     address: address || '',
     contractorId: contractorId || null,
     hasPatrol: !!hasPatrol,
+    contractorRate: Number(contractorRate) || 0,
     checkpoints: [],
     active: true
   };
@@ -111,13 +112,14 @@ app.put('/api/objects/:id', (req, res) => {
   if (!object) {
     return res.status(404).json({ error: 'Объект не найден' });
   }
-  const { name, address, contractorId, hasPatrol, active } = req.body || {};
+  const { name, address, contractorId, hasPatrol, active, contractorRate } = req.body || {};
   const updates = {};
   if (name !== undefined) updates.name = name;
   if (address !== undefined) updates.address = address;
   if (contractorId !== undefined) updates.contractorId = contractorId || null;
   if (hasPatrol !== undefined) updates.hasPatrol = !!hasPatrol;
   if (active !== undefined) updates.active = !!active;
+  if (contractorRate !== undefined) updates.contractorRate = Number(contractorRate) || 0;
   db.get('objects').find({ id }).assign(updates).write();
   res.json(db.get('objects').find({ id }).value());
 });
@@ -131,13 +133,14 @@ app.get('/api/employees', (req, res) => {
     role: g.role || 'guard',
     position: g.position || 'Охранник',
     official: g.official !== false,
-    active: g.active !== false
+    active: g.active !== false,
+    shiftRate: g.shiftRate || 0
   }));
   res.json(employees);
 });
 
 app.post('/api/employees', (req, res) => {
-  const { name, phone, pin, role, position, official } = req.body || {};
+  const { name, phone, pin, role, position, official, shiftRate } = req.body || {};
   if (!name || !phone || !pin) {
     return res.status(400).json({ error: 'ФИО, телефон и PIN обязательны' });
   }
@@ -153,7 +156,8 @@ app.post('/api/employees', (req, res) => {
     role: role === 'manager' ? 'manager' : 'guard',
     position: position || 'Охранник',
     official: official !== false,
-    active: true
+    active: true,
+    shiftRate: Number(shiftRate) || 0
   };
   db.get('guards').push(employee).write();
   res.json(employee);
@@ -165,7 +169,7 @@ app.put('/api/employees/:id', (req, res) => {
   if (!guard) {
     return res.status(404).json({ error: 'Сотрудник не найден' });
   }
-  const { name, phone, pin, role, position, official, active } = req.body || {};
+  const { name, phone, pin, role, position, official, active, shiftRate } = req.body || {};
   const updates = {};
   if (name !== undefined) updates.name = name;
   if (phone !== undefined) updates.phone = phone;
@@ -174,6 +178,7 @@ app.put('/api/employees/:id', (req, res) => {
   if (position !== undefined) updates.position = position;
   if (official !== undefined) updates.official = !!official;
   if (active !== undefined) updates.active = !!active;
+  if (shiftRate !== undefined) updates.shiftRate = Number(shiftRate) || 0;
   db.get('guards').find({ id }).assign(updates).write();
   res.json(db.get('guards').find({ id }).value());
 });
@@ -205,6 +210,68 @@ app.get('/api/me/:guardId/today', (req, res) => {
   }
 
   res.json({ assignment, object, shift, checkpoints });
+});
+
+// ---------- ТАБЕЛЬ / ЗП (менеджер: расчёт за период) ----------
+app.get('/api/timesheet', (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) {
+    return res.status(400).json({ error: 'from и to обязательны' });
+  }
+
+  const shifts = db.get('shifts')
+    .filter((s) => s.date >= from && s.date <= to)
+    .value();
+  const guardsAll = db.get('guards').value();
+  const objectsAll = db.get('objects').value();
+
+  const guardCounts = {};
+  const objectCounts = {};
+  shifts.forEach((s) => {
+    guardCounts[s.guardId] = (guardCounts[s.guardId] || 0) + 1;
+    objectCounts[s.objectId] = (objectCounts[s.objectId] || 0) + 1;
+  });
+
+  const guards = Object.keys(guardCounts).map((guardId) => {
+    const guard = guardsAll.find((g) => g.id === guardId);
+    const rate = (guard && guard.shiftRate) || 0;
+    const shiftsCount = guardCounts[guardId];
+    return {
+      guardId,
+      name: guard ? guard.name : guardId,
+      shiftsCount,
+      rate,
+      total: shiftsCount * rate
+    };
+  }).sort((a, b) => b.total - a.total);
+
+  const objects = Object.keys(objectCounts).map((objectId) => {
+    const object = objectsAll.find((o) => o.id === objectId);
+    const rate = (object && object.contractorRate) || 0;
+    const shiftsCount = objectCounts[objectId];
+    return {
+      objectId,
+      name: object ? object.name : objectId,
+      shiftsCount,
+      rate,
+      total: shiftsCount * rate
+    };
+  }).sort((a, b) => b.total - a.total);
+
+  const guardsTotal = guards.reduce((sum, g) => sum + g.total, 0);
+  const objectsTotal = objects.reduce((sum, o) => sum + o.total, 0);
+
+  res.json({
+    from,
+    to,
+    guards,
+    objects,
+    totals: {
+      guardsTotal,
+      objectsTotal,
+      profit: objectsTotal - guardsTotal
+    }
+  });
 });
 
 // ---------- ИСТОРИЯ ОБХОДОВ (менеджер: кто прошёл обход и когда) ----------
