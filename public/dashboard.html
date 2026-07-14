@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сводка — Патруль Р</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .dash-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
+  .dash-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px}
+  .dash-topbar-name{font-size:1.2rem;font-weight:800}
+  .dash-nav{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .dash-nav a{color:var(--muted);text-decoration:none;font-size:.95rem}
+  .dash-nav a:hover{color:var(--accent)}
+  .dash-controls{margin:18px 0}
+  .dash-controls input[type=date]{
+    padding:10px 12px;font-size:16px;border:1.5px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;
+  }
+
+  .dash-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:26px}
+  .dash-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px 18px}
+  .dash-card-num{font-size:1.7rem;font-weight:800;line-height:1}
+  .dash-card-label{color:var(--muted);font-size:.85rem;margin-top:6px}
+  .dash-card.ok .dash-card-num{color:var(--ok)}
+  .dash-card.warn .dash-card-num{color:var(--warn)}
+  .dash-card.accent .dash-card-num{color:var(--accent)}
+
+  .dash-section{margin-bottom:26px}
+  .dash-section-title{font-size:1.05rem;font-weight:800;margin-bottom:12px}
+  .dash-list{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden}
+  .dash-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;
+    border-bottom:1px solid var(--line);font-size:.95rem}
+  .dash-row:last-child{border-bottom:none}
+  .dash-row .sub{color:var(--muted);font-size:.85rem}
+  .dash-empty{color:var(--muted);text-align:center;padding:24px;font-size:.92rem}
+  .dash-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700}
+  .dash-badge.warn{background:var(--warn-soft);color:var(--warn)}
+  .dash-badge.ok{background:var(--ok-soft);color:var(--ok)}
+</style>
+</head>
+<body>
+  <div class="dash-wrap">
+    <div class="dash-topbar">
+      <div class="dash-topbar-name">Сводка на день</div>
+      <div class="dash-nav">
+        <a href="/photos.html">Фотоотчёты</a>
+        <a href="/employees.html">Сотрудники</a>
+        <a href="/contractors.html">Контрагенты</a>
+        <a href="/objects.html">Объекты</a>
+        <a href="/assignments.html">Смены</a>
+        <a href="/patrols.html">Обходы</a>
+        <a href="#" onclick="goHome();return false;">Выйти</a>
+      </div>
+    </div>
+
+    <div class="dash-controls">
+      <input type="date" id="dashDate" onchange="loadData()">
+    </div>
+
+    <div class="dash-cards" id="dashCards"></div>
+
+    <div class="dash-section">
+      <div class="dash-section-title">Не назначены на объект</div>
+      <div class="dash-list" id="unassignedList"></div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-title">Назначены, но не начали смену</div>
+      <div class="dash-list" id="notStartedList"></div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-title">Обход выполнен не полностью</div>
+      <div class="dash-list" id="incompletePatrolList"></div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-section-title">Последние фотоотчёты</div>
+      <div class="dash-list" id="recentPhotosList"></div>
+    </div>
+  </div>
+
+<script>
+function goHome() {
+  localStorage.removeItem('guardId');
+  localStorage.removeItem('guardName');
+  localStorage.removeItem('guardRole');
+  window.location.href = '/';
+}
+
+function currentDate() {
+  return document.getElementById('dashDate').value;
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function loadData() {
+  var date = currentDate();
+  Promise.all([
+    fetch('/api/employees').then(function (r) { return r.json(); }),
+    fetch('/api/objects').then(function (r) { return r.json(); }),
+    fetch('/api/assignments?date=' + date).then(function (r) { return r.json(); }),
+    fetch('/api/shifts?date=' + date).then(function (r) { return r.json(); }),
+    fetch('/api/patrol-summary?date=' + date).then(function (r) { return r.json(); }),
+    fetch('/api/photo-reports?date=' + date).then(function (r) { return r.json(); })
+  ]).then(function (results) {
+    render(results[0], results[1], results[2], results[3], results[4], results[5]);
+  });
+}
+
+function render(employees, objects, assignments, shifts, patrolSummary, photoReports) {
+  var guards = employees.filter(function (e) { return e.role !== 'manager' && e.active !== false; });
+
+  var assignedIds = assignments.map(function (a) { return a.guardId; });
+  var unassigned = guards.filter(function (g) { return assignedIds.indexOf(g.id) === -1; });
+
+  var onShift = shifts.filter(function (s) { return !s.endedAt; });
+  var onShiftIds = shifts.map(function (s) { return s.guardId; });
+  var notStarted = guards.filter(function (g) {
+    return assignedIds.indexOf(g.id) !== -1 && onShiftIds.indexOf(g.id) === -1;
+  }).map(function (g) {
+    var asg = assignments.find(function (a) { return a.guardId === g.id; });
+    var obj = objects.find(function (o) { return o.id === (asg ? asg.objectId : null); });
+    return { name: g.name, objectName: obj ? obj.name : '—' };
+  });
+
+  var incomplete = patrolSummary.filter(function (s) { return s.checkpointsDone < s.checkpointsTotal; });
+
+  // ---------- карточки ----------
+  var cardsEl = document.getElementById('dashCards');
+  cardsEl.innerHTML = '';
+  var cards = [
+    { num: guards.length, label: 'Всего сотрудников', cls: '' },
+    { num: onShift.length, label: 'На смене сейчас', cls: 'ok' },
+    { num: unassigned.length, label: 'Не назначены', cls: unassigned.length ? 'warn' : '' },
+    { num: notStarted.length, label: 'Не начали смену', cls: notStarted.length ? 'warn' : '' },
+    { num: incomplete.length, label: 'Обход не завершён', cls: incomplete.length ? 'warn' : '' },
+    { num: photoReports.length, label: 'Фотоотчётов за день', cls: 'accent' }
+  ];
+  cards.forEach(function (c) {
+    var card = document.createElement('div');
+    card.className = 'dash-card' + (c.cls ? ' ' + c.cls : '');
+    var num = document.createElement('div');
+    num.className = 'dash-card-num';
+    num.textContent = c.num;
+    var label = document.createElement('div');
+    label.className = 'dash-card-label';
+    label.textContent = c.label;
+    card.appendChild(num);
+    card.appendChild(label);
+    cardsEl.appendChild(card);
+  });
+
+  // ---------- не назначены ----------
+  renderList('unassignedList', unassigned, function (g) {
+    return rowSimple(g.name, null);
+  }, 'Все сотрудники назначены на объекты');
+
+  // ---------- не начали смену ----------
+  renderList('notStartedList', notStarted, function (n) {
+    return rowSimple(n.name, n.objectName);
+  }, 'Все назначенные уже начали смену');
+
+  // ---------- обход не завершён ----------
+  renderList('incompletePatrolList', incomplete, function (s) {
+    return rowBadge(s.guardName, s.objectName, s.checkpointsDone + ' из ' + s.checkpointsTotal, 'warn');
+  }, 'У всех обход выполнен полностью');
+
+  // ---------- фотоотчёты ----------
+  var recent = photoReports.slice(0, 8);
+  renderList('recentPhotosList', recent, function (r) {
+    return rowBadge(r.guardName, null, fmtTime(r.takenAt), 'ok');
+  }, 'За эту дату фотоотчётов пока нет');
+}
+
+function rowSimple(name, sub) {
+  var row = document.createElement('div');
+  row.className = 'dash-row';
+  var left = document.createElement('div');
+  left.textContent = name;
+  row.appendChild(left);
+  if (sub) {
+    var right = document.createElement('div');
+    right.className = 'sub';
+    right.textContent = sub;
+    row.appendChild(right);
+  }
+  return row;
+}
+
+function rowBadge(name, sub, badgeText, badgeCls) {
+  var row = document.createElement('div');
+  row.className = 'dash-row';
+  var left = document.createElement('div');
+  left.textContent = name + (sub ? ' — ' + sub : '');
+  var badge = document.createElement('span');
+  badge.className = 'dash-badge ' + badgeCls;
+  badge.textContent = badgeText;
+  row.appendChild(left);
+  row.appendChild(badge);
+  return row;
+}
+
+function renderList(containerId, items, rowFn, emptyText) {
+  var container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (!items.length) {
+    var empty = document.createElement('div');
+    empty.className = 'dash-empty';
+    empty.textContent = emptyText;
+    container.appendChild(empty);
+    return;
+  }
+  items.forEach(function (item) {
+    container.appendChild(rowFn(item));
+  });
+}
+
+document.getElementById('dashDate').value = new Date().toISOString().slice(0, 10);
+loadData();
+</script>
+</body>
+</html>
