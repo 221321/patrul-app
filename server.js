@@ -207,6 +207,44 @@ app.get('/api/me/:guardId/today', (req, res) => {
   res.json({ assignment, object, shift, checkpoints });
 });
 
+// ---------- НАЗНАЧЕНИЯ (менеджер: кто на каком объекте в какой день) ----------
+app.get('/api/assignments', (req, res) => {
+  const date = req.query.date || today();
+  res.json(db.get('assignments').filter({ date }).value());
+});
+
+// Один сотрудник — одно назначение на дату. Повторный POST с тем же guardId+date
+// перезаписывает объект. objectId: '' или null — снять назначение.
+app.post('/api/assignments', (req, res) => {
+  const { guardId, objectId, date } = req.body || {};
+  if (!guardId || !date) {
+    return res.status(400).json({ error: 'guardId и date обязательны' });
+  }
+  const existing = db.get('assignments').find({ guardId, date }).value();
+
+  if (!objectId) {
+    if (existing) {
+      db.get('assignments').remove({ guardId, date }).write();
+    }
+    return res.json({ removed: true });
+  }
+
+  if (existing) {
+    db.get('assignments').find({ guardId, date }).assign({ objectId }).write();
+    return res.json(db.get('assignments').find({ guardId, date }).value());
+  }
+
+  const assignment = { id: 'a_' + Date.now() + '_' + guardId, guardId, objectId, date };
+  db.get('assignments').push(assignment).write();
+  res.json(assignment);
+});
+
+// Смены за дату — чтобы менеджер видел, кто уже начал/закончил
+app.get('/api/shifts', (req, res) => {
+  const date = req.query.date || today();
+  res.json(db.get('shifts').filter({ date }).value());
+});
+
 // ---------- НАЧАЛО СМЕНЫ ----------
 app.post('/api/shift/start', (req, res) => {
   const { guardId, objectId } = req.body || {};
