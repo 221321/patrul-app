@@ -54,17 +54,18 @@
 </head>
 <body>
   <div class="feed-wrap">
-<div class="feed-topbar">
+    <div class="feed-topbar site-topbar">
       <div class="feed-topbar-name">Фотоотчёты</div>
-      <div style="display:flex;align-items:center;gap:16px">
-<a href="/dashboard.html" style="color:var(--muted);text-decoration:none;font-size:.95rem">Сводка</a>
-<a href="/employees.html" style="color:var(--muted);text-decoration:none;font-size:.95rem">Сотрудники</a>
-        <a href="/contractors.html" style="color:var(--muted);text-decoration:none;font-size:.95rem">Контрагенты</a>
-        <a href="/objects.html" style="color:var(--muted);text-decoration:none;font-size:.95rem">Объекты</a>
-        <a href="/assignments.html" style="color:var(--muted);text-decoration:none;font-size:.95rem">Смены</a>
-        <a href="/patrols.html" style="color:var(--muted);text-decoration:none;font-size:.95rem">Обходы</a>
-<a href="/timesheet.html" style="color:var(--muted);text-decoration:none;font-size:.95rem">Табель / ЗП</a>
-        <button class="link-btn" onclick="goHome()">Выйти</button>
+      <button class="site-nav-toggle" id="navToggle" onclick="toggleNav()">☰</button>
+      <div class="site-nav" id="siteNav">
+        <a href="/dashboard.html">Сводка</a>
+        <a href="/employees.html">Сотрудники</a>
+        <a href="/contractors.html">Контрагенты</a>
+        <a href="/objects.html">Объекты</a>
+        <a href="/assignments.html">Смены</a>
+        <a href="/patrols.html">Обходы</a>
+        <a href="/timesheet.html">Табель / ЗП</a>
+        <a href="#" onclick="goHome();return false;">Выйти</a>
       </div>
     </div>
 
@@ -87,6 +88,18 @@ function goHome() {
   localStorage.removeItem('guardRole');
   window.location.href = '/';
 }
+
+function toggleNav() {
+  var nav = document.getElementById('siteNav');
+  if (nav) nav.classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+  var nav = document.getElementById('siteNav');
+  var toggle = document.getElementById('navToggle');
+  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && e.target !== toggle) {
+    nav.classList.remove('open');
+  }
+});
 
 function loadFeed() {
   var date = document.getElementById('feedDate').value;
