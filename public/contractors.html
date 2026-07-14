@@ -57,16 +57,17 @@
 </head>
 <body>
   <div class="emp-wrap">
-    <div class="emp-topbar">
+    <div class="emp-topbar site-topbar">
       <div class="emp-topbar-name">Контрагенты</div>
-      <div class="emp-nav">
-<a href="/dashboard.html">Сводка</a>
-<a href="/photos.html">Фотоотчёты</a>
+      <button class="site-nav-toggle" id="navToggle" onclick="toggleNav()">☰</button>
+      <div class="site-nav" id="siteNav">
+        <a href="/dashboard.html">Сводка</a>
+        <a href="/photos.html">Фотоотчёты</a>
         <a href="/employees.html">Сотрудники</a>
         <a href="/objects.html">Объекты</a>
         <a href="/assignments.html">Смены</a>
         <a href="/patrols.html">Обходы</a>
-<a href="/timesheet.html">Табель / ЗП</a>
+        <a href="/timesheet.html">Табель / ЗП</a>
         <a href="#" onclick="goHome();return false;">Выйти</a>
       </div>
     </div>
@@ -77,6 +78,7 @@
     </div>
 
     <div class="emp-count" id="empCount"></div>
+    <div class="table-scroll">
     <table class="emp-table" id="empTable">
       <thead>
         <tr>
@@ -89,6 +91,7 @@
       </thead>
       <tbody id="empTbody"></tbody>
     </table>
+    </div>
     <div class="emp-empty hidden" id="empEmpty">Контрагенты не найдены</div>
   </div>
 
@@ -101,6 +104,18 @@ function goHome() {
   localStorage.removeItem('guardRole');
   window.location.href = '/';
 }
+
+function toggleNav() {
+  var nav = document.getElementById('siteNav');
+  if (nav) nav.classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+  var nav = document.getElementById('siteNav');
+  var toggle = document.getElementById('navToggle');
+  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && e.target !== toggle) {
+    nav.classList.remove('open');
+  }
+});
 
 function loadContractors() {
   fetch('/api/contractors')
