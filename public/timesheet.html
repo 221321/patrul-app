@@ -45,9 +45,10 @@
 </head>
 <body>
   <div class="emp-wrap">
-    <div class="emp-topbar">
+    <div class="emp-topbar site-topbar">
       <div class="emp-topbar-name">Табель / ЗП</div>
-      <div class="emp-nav">
+      <button class="site-nav-toggle" id="navToggle" onclick="toggleNav()">☰</button>
+      <div class="site-nav" id="siteNav">
         <a href="/dashboard.html">Сводка</a>
         <a href="/photos.html">Фотоотчёты</a>
         <a href="/employees.html">Сотрудники</a>
@@ -72,6 +73,7 @@
 
     <div class="ts-section">
       <div class="ts-section-title">Оплата охранникам</div>
+      <div class="table-scroll">
       <table class="emp-table" id="guardsTable">
         <thead>
           <tr>
@@ -89,11 +91,13 @@
           </tr>
         </tfoot>
       </table>
+      </div>
       <div class="emp-empty hidden" id="guardsEmpty">За этот период смен не было</div>
     </div>
 
     <div class="ts-section">
       <div class="ts-section-title">Выставление контрагентам (по объектам)</div>
+      <div class="table-scroll">
       <table class="emp-table" id="objectsTable">
         <thead>
           <tr>
@@ -111,6 +115,7 @@
           </tr>
         </tfoot>
       </table>
+      </div>
       <div class="emp-empty hidden" id="objectsEmpty">За этот период смен не было</div>
     </div>
   </div>
@@ -122,6 +127,18 @@ function goHome() {
   localStorage.removeItem('guardRole');
   window.location.href = '/';
 }
+
+function toggleNav() {
+  var nav = document.getElementById('siteNav');
+  if (nav) nav.classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+  var nav = document.getElementById('siteNav');
+  var toggle = document.getElementById('navToggle');
+  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && e.target !== toggle) {
+    nav.classList.remove('open');
+  }
+});
 
 function fmtMoney(n) {
   return Number(n || 0).toLocaleString('ru-RU') + ' ₸';
