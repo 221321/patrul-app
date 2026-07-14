@@ -83,12 +83,22 @@ app.put('/api/contractors/:id', (req, res) => {
   res.json(db.get('contractors').find({ id }).value());
 });
 // ---------- ОБЪЕКТЫ ----------
+function sanitizeCheckpoints(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((cp) => cp && typeof cp.name === 'string' && cp.name.trim())
+    .map((cp, idx) => ({
+      id: cp.id || ('cp_' + Date.now() + '_' + idx),
+      name: cp.name.trim()
+    }));
+}
+
 app.get('/api/objects', (req, res) => {
   res.json(db.get('objects').value());
 });
 
 app.post('/api/objects', (req, res) => {
-  const { name, address, contractorId, hasPatrol, contractorRate } = req.body || {};
+  const { name, address, contractorId, hasPatrol, contractorRate, checkpoints } = req.body || {};
   if (!name) {
     return res.status(400).json({ error: 'Название объекта обязательно' });
   }
@@ -99,7 +109,7 @@ app.post('/api/objects', (req, res) => {
     contractorId: contractorId || null,
     hasPatrol: !!hasPatrol,
     contractorRate: Number(contractorRate) || 0,
-    checkpoints: [],
+    checkpoints: sanitizeCheckpoints(checkpoints),
     active: true
   };
   db.get('objects').push(object).write();
@@ -112,7 +122,7 @@ app.put('/api/objects/:id', (req, res) => {
   if (!object) {
     return res.status(404).json({ error: 'Объект не найден' });
   }
-  const { name, address, contractorId, hasPatrol, active, contractorRate } = req.body || {};
+  const { name, address, contractorId, hasPatrol, active, contractorRate, checkpoints } = req.body || {};
   const updates = {};
   if (name !== undefined) updates.name = name;
   if (address !== undefined) updates.address = address;
@@ -120,6 +130,7 @@ app.put('/api/objects/:id', (req, res) => {
   if (hasPatrol !== undefined) updates.hasPatrol = !!hasPatrol;
   if (active !== undefined) updates.active = !!active;
   if (contractorRate !== undefined) updates.contractorRate = Number(contractorRate) || 0;
+  if (checkpoints !== undefined) updates.checkpoints = sanitizeCheckpoints(checkpoints);
   db.get('objects').find({ id }).assign(updates).write();
   res.json(db.get('objects').find({ id }).value());
 });
