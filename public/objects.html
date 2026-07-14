@@ -56,6 +56,17 @@
     font-weight:700;cursor:pointer;font-family:inherit}
   .emp-error{color:var(--warn);font-size:.88rem;min-height:18px}
 
+  .cp-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+  .cp-row input{flex:1;padding:9px 11px;font-size:15px;border:1.5px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);font-family:inherit}
+  .cp-remove-btn{background:none;border:none;cursor:pointer;color:var(--warn);font-size:1.1rem;
+    padding:4px 8px;line-height:1;font-family:inherit}
+  .cp-add-btn{padding:8px 12px;font-size:.88rem;font-weight:700;border-radius:8px;
+    border:1.5px dashed var(--line);background:none;color:var(--muted);cursor:pointer;
+    font-family:inherit;width:100%;margin-top:2px}
+  .cp-add-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .cp-empty-hint{color:var(--muted);font-size:.85rem;margin:4px 0}
+
   .qr-panel{max-width:520px}
   .qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-top:6px}
   .qr-card{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;background:#FBFCFD}
@@ -243,9 +254,13 @@ function toggleActive(o) {
 }
 
 var editingId = null;
+var editingCheckpoints = [];
 
 function openForm(o) {
   editingId = o ? o.id : null;
+  editingCheckpoints = (o && o.checkpoints ? o.checkpoints : []).map(function (cp) {
+    return { id: cp.id, name: cp.name };
+  });
   var existing = document.getElementById('empOverlay');
   if (existing) existing.remove();
 
@@ -269,7 +284,12 @@ function openForm(o) {
     '<div class="emp-field"><label>Адрес</label><input id="fAddress" type="text" value="' + (o ? escapeAttr(o.address || '') : '') + '"></div>' +
     '<div class="emp-field"><label>Контрагент</label><select id="fContractor">' + contractorOptions + '</select></div>' +
     '<div class="emp-field"><label>Оплата от контрагента за смену (₸)</label><input id="fContractorRate" type="number" min="0" step="500" value="' + (o ? (o.contractorRate || 0) : '0') + '"></div>' +
-    '<div class="emp-checkbox-row"><input id="fPatrol" type="checkbox"' + (o && o.hasPatrol ? ' checked' : '') + '><label for="fPatrol" style="margin:0">Требуется обход по точкам</label></div>' +
+    '<div class="emp-checkbox-row"><input id="fPatrol" type="checkbox" onchange="toggleCheckpointsWrap()"' + (o && o.hasPatrol ? ' checked' : '') + '><label for="fPatrol" style="margin:0">Требуется обход по точкам</label></div>' +
+    '<div id="fCheckpointsWrap" class="hidden">' +
+      '<label style="display:block;font-size:.85rem;color:var(--muted);margin:6px 0 5px">Точки обхода</label>' +
+      '<div id="fCheckpointsList"></div>' +
+      '<button type="button" class="cp-add-btn" onclick="addCheckpointRow()">+ Добавить точку</button>' +
+    '</div>' +
     '<div class="emp-error" id="fError"></div>' +
     '<div class="emp-panel-actions">' +
       '<button class="emp-cancel-btn" onclick="closeForm()">Отмена</button>' +
@@ -278,6 +298,60 @@ function openForm(o) {
 
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
+
+  renderCheckpointsEditor();
+  toggleCheckpointsWrap();
+}
+
+function toggleCheckpointsWrap() {
+  var checkbox = document.getElementById('fPatrol');
+  var wrap = document.getElementById('fCheckpointsWrap');
+  if (!checkbox || !wrap) return;
+  wrap.classList.toggle('hidden', !checkbox.checked);
+}
+
+function renderCheckpointsEditor() {
+  var list = document.getElementById('fCheckpointsList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!editingCheckpoints.length) {
+    var hint = document.createElement('div');
+    hint.className = 'cp-empty-hint';
+    hint.textContent = 'Точки ещё не добавлены';
+    list.appendChild(hint);
+    return;
+  }
+
+  editingCheckpoints.forEach(function (cp, idx) {
+    var row = document.createElement('div');
+    row.className = 'cp-row';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Название точки, например «КПП-1, главный вход»';
+    input.value = cp.name || '';
+    input.oninput = function () { editingCheckpoints[idx].name = input.value; };
+    row.appendChild(input);
+
+    var rmBtn = document.createElement('button');
+    rmBtn.type = 'button';
+    rmBtn.className = 'cp-remove-btn';
+    rmBtn.textContent = '✕';
+    rmBtn.title = 'Удалить точку';
+    rmBtn.onclick = function () {
+      editingCheckpoints.splice(idx, 1);
+      renderCheckpointsEditor();
+    };
+    row.appendChild(rmBtn);
+
+    list.appendChild(row);
+  });
+}
+
+function addCheckpointRow() {
+  editingCheckpoints.push({ id: null, name: '' });
+  renderCheckpointsEditor();
 }
 
 function escapeAttr(str) {
@@ -288,6 +362,7 @@ function closeForm() {
   var existing = document.getElementById('empOverlay');
   if (existing) existing.remove();
   editingId = null;
+  editingCheckpoints = [];
 }
 
 function saveForm() {
@@ -304,7 +379,11 @@ function saveForm() {
     return;
   }
 
-  var body = { name: name, address: address, contractorId: contractorId, hasPatrol: hasPatrol, contractorRate: contractorRate };
+  var checkpointsPayload = editingCheckpoints.filter(function (cp) {
+    return cp.name && cp.name.trim();
+  });
+
+  var body = { name: name, address: address, contractorId: contractorId, hasPatrol: hasPatrol, contractorRate: contractorRate, checkpoints: checkpointsPayload };
 
   var request = editingId
     ? fetch('/api/objects/' + editingId, {
