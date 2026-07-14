@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Объекты — Патруль Р</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .emp-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
+  .emp-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px}
+  .emp-topbar-name{font-size:1.2rem;font-weight:800}
+  .emp-nav{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .emp-nav a{color:var(--muted);text-decoration:none;font-size:.95rem}
+  .emp-nav a:hover{color:var(--accent)}
+  .emp-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}
+  .emp-controls input[type=search]{
+    flex:1;min-width:200px;padding:10px 12px;font-size:16px;
+    border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;
+  }
+  .emp-add-btn{padding:10px 18px;font-size:.95rem;font-weight:700;border-radius:10px;border:none;
+    background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .emp-add-btn:hover{background:var(--accent-dark)}
+  .emp-count{color:var(--muted);font-size:.9rem;margin-bottom:12px}
+
+  .emp-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .emp-table th{text-align:left;font-size:.82rem;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;padding:12px 14px;border-bottom:1px solid var(--line);background:#FAFBFC}
+  .emp-table td{padding:12px 14px;border-bottom:1px solid var(--line);font-size:.95rem}
+  .emp-table tr:last-child td{border-bottom:none}
+  .emp-row-inactive{opacity:.5}
+  .emp-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700;
+    background:var(--accent-soft);color:var(--accent-dark)}
+  .emp-row-actions{display:flex;gap:8px}
+  .emp-icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;
+    padding:4px 8px;border-radius:6px;font-family:inherit}
+  .emp-icon-btn:hover{background:var(--accent-soft);color:var(--accent)}
+  .emp-empty{color:var(--muted);text-align:center;padding:50px 0}
+
+  .emp-overlay{position:fixed;inset:0;background:rgba(20,26,32,.55);
+    display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+  .emp-panel{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:420px;
+    box-shadow:var(--shadow-lift);display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow-y:auto}
+  .emp-panel-title{font-size:1.2rem;font-weight:800;margin-bottom:4px}
+  .emp-field label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px}
+  .emp-field input,.emp-field select{
+    width:100%;padding:11px 13px;font-size:16px;border:1.5px solid var(--line);
+    border-radius:10px;background:#FBFCFD;color:var(--ink);font-family:inherit
+  }
+  .emp-checkbox-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+  .emp-checkbox-row input{width:auto}
+  .emp-panel-actions{display:flex;gap:10px;margin-top:10px}
+  .emp-panel-actions button{flex:1}
+  .emp-cancel-btn{background:#E7EBEE;color:var(--ink);padding:12px;border-radius:10px;border:none;
+    font-weight:700;cursor:pointer;font-family:inherit}
+  .emp-error{color:var(--warn);font-size:.88rem;min-height:18px}
+</style>
+</head>
+<body>
+  <div class="emp-wrap">
+    <div class="emp-topbar">
+      <div class="emp-topbar-name">Объекты</div>
+      <div class="emp-nav">
+        <a href="/photos.html">Фотоотчёты</a>
+        <a href="/employees.html">Сотрудники</a>
+        <a href="/contractors.html">Контрагенты</a>
+        <a href="#" onclick="goHome();return false;">Выйти</a>
+      </div>
+    </div>
+
+    <div class="emp-controls">
+      <input type="search" id="empSearch" placeholder="Поиск по названию или адресу…" oninput="renderTable()">
+      <button class="emp-add-btn" onclick="openForm(null)">+ Добавить объект</button>
+    </div>
+
+    <div class="emp-count" id="empCount"></div>
+    <table class="emp-table" id="empTable">
+      <thead>
+        <tr>
+          <th>Название</th>
+          <th>Адрес</th>
+          <th>Контрагент</th>
+          <th>Обход</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="empTbody"></tbody>
+    </table>
+    <div class="emp-empty hidden" id="empEmpty">Объекты не найдены</div>
+  </div>
+
+<script>
+var allObjects = [];
+var allContractors = [];
+
+function goHome() {
+  localStorage.removeItem('guardId');
+  localStorage.removeItem('guardName');
+  localStorage.removeItem('guardRole');
+  window.location.href = '/';
+}
+
+function contractorName(id) {
+  var c = allContractors.find(function (x) { return x.id === id; });
+  return c ? c.name : '—';
+}
+
+function loadData() {
+  Promise.all([
+    fetch('/api/objects').then(function (r) { return r.json(); }),
+    fetch('/api/contractors').then(function (r) { return r.json(); })
+  ]).then(function (results) {
+    allObjects = results[0];
+    allContractors = results[1];
+    renderTable();
+  });
+}
+
+function renderTable() {
+  var query = document.getElementById('empSearch').value.trim().toLowerCase();
+  var tbody = document.getElementById('empTbody');
+  var empty = document.getElementById('empEmpty');
+  var countEl = document.getElementById('empCount');
+  var table = document.getElementById('empTable');
+
+  var filtered = query
+    ? allObjects.filter(function (o) {
+        return o.name.toLowerCase().indexOf(query) !== -1 || (o.address || '').toLowerCase().indexOf(query) !== -1;
+      })
+    : allObjects;
+
+  countEl.textContent = allObjects.length
+    ? 'Показано ' + filtered.length + ' из ' + allObjects.length
+    : '';
+
+  tbody.innerHTML = '';
+  var hasResults = filtered.length > 0;
+  table.classList.toggle('hidden', !hasResults);
+  empty.classList.toggle('hidden', hasResults);
+
+  filtered.forEach(function (o) {
+    var tr = document.createElement('tr');
+    if (o.active === false) tr.className = 'emp-row-inactive';
+
+    var tdName = document.createElement('td');
+    tdName.textContent = o.name;
+
+    var tdAddress = document.createElement('td');
+    tdAddress.textContent = o.address || '—';
+
+    var tdContractor = document.createElement('td');
+    tdContractor.textContent = contractorName(o.contractorId);
+
+    var tdPatrol = document.createElement('td');
+    var badge = document.createElement('span');
+    badge.className = 'emp-badge';
+    badge.textContent = o.hasPatrol ? 'Есть' : 'Нет';
+    tdPatrol.appendChild(badge);
+
+    var tdActions = document.createElement('td');
+    var actionsWrap = document.createElement('div');
+    actionsWrap.className = 'emp-row-actions';
+    var editBtn = document.createElement('button');
+    editBtn.className = 'emp-icon-btn';
+    editBtn.textContent = 'Изменить';
+    editBtn.onclick = function () { openForm(o); };
+    actionsWrap.appendChild(editBtn);
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.className = 'emp-icon-btn';
+    toggleBtn.textContent = o.active === false ? 'Восстановить' : 'В архив';
+    toggleBtn.onclick = function () { toggleActive(o); };
+    actionsWrap.appendChild(toggleBtn);
+
+    tdActions.appendChild(actionsWrap);
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdAddress);
+    tr.appendChild(tdContractor);
