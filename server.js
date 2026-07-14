@@ -207,6 +207,44 @@ app.get('/api/me/:guardId/today', (req, res) => {
   res.json({ assignment, object, shift, checkpoints });
 });
 
+// ---------- ИСТОРИЯ ОБХОДОВ (менеджер: кто прошёл обход и когда) ----------
+app.get('/api/patrol-summary', (req, res) => {
+  const date = req.query.date || today();
+  const shifts = db.get('shifts').filter({ date }).value();
+  const guards = db.get('guards').value();
+  const objects = db.get('objects').value();
+  const scans = db.get('checkpointScans').value();
+
+  const summary = shifts
+    .map((shift) => {
+      const guard = guards.find((g) => g.id === shift.guardId);
+      const object = objects.find((o) => o.id === shift.objectId);
+      if (!object || !object.hasPatrol) return null;
+
+      const shiftScans = scans.filter((s) => s.shiftId === shift.id);
+      const checkpoints = object.checkpoints.map((cp) => {
+        const scan = shiftScans.find((s) => s.checkpointId === cp.id);
+        return { name: cp.name, scannedAt: scan ? scan.scannedAt : null };
+      });
+      const done = checkpoints.filter((cp) => cp.scannedAt).length;
+
+      return {
+        shiftId: shift.id,
+        guardName: guard ? guard.name : '—',
+        objectName: object.name,
+        startedAt: shift.startedAt,
+        endedAt: shift.endedAt,
+        checkpointsTotal: checkpoints.length,
+        checkpointsDone: done,
+        checkpoints: checkpoints
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || ''));
+
+  res.json(summary);
+});
+
 // ---------- НАЗНАЧЕНИЯ (менеджер: кто на каком объекте в какой день) ----------
 app.get('/api/assignments', (req, res) => {
   const date = req.query.date || today();
