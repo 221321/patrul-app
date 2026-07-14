@@ -82,6 +82,45 @@ app.put('/api/contractors/:id', (req, res) => {
   db.get('contractors').find({ id }).assign(updates).write();
   res.json(db.get('contractors').find({ id }).value());
 });
+// ---------- ОБЪЕКТЫ ----------
+app.get('/api/objects', (req, res) => {
+  res.json(db.get('objects').value());
+});
+
+app.post('/api/objects', (req, res) => {
+  const { name, address, contractorId, hasPatrol } = req.body || {};
+  if (!name) {
+    return res.status(400).json({ error: 'Название объекта обязательно' });
+  }
+  const object = {
+    id: 'o_' + Date.now(),
+    name,
+    address: address || '',
+    contractorId: contractorId || null,
+    hasPatrol: !!hasPatrol,
+    checkpoints: [],
+    active: true
+  };
+  db.get('objects').push(object).write();
+  res.json(object);
+});
+
+app.put('/api/objects/:id', (req, res) => {
+  const { id } = req.params;
+  const object = db.get('objects').find({ id }).value();
+  if (!object) {
+    return res.status(404).json({ error: 'Объект не найден' });
+  }
+  const { name, address, contractorId, hasPatrol, active } = req.body || {};
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (address !== undefined) updates.address = address;
+  if (contractorId !== undefined) updates.contractorId = contractorId || null;
+  if (hasPatrol !== undefined) updates.hasPatrol = !!hasPatrol;
+  if (active !== undefined) updates.active = !!active;
+  db.get('objects').find({ id }).assign(updates).write();
+  res.json(db.get('objects').find({ id }).value());
+});
 // ---------- СЕГОДНЯШНЕЕ НАЗНАЧЕНИЕ ----------
 // ---------- СОТРУДНИКИ (КАДРЫ) ----------
 app.get('/api/employees', (req, res) => {
