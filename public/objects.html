@@ -67,6 +67,7 @@
         <a href="/contractors.html">Контрагенты</a>
         <a href="/assignments.html">Смены</a>
         <a href="/patrols.html">Обходы</a>
+        <a href="/timesheet.html">Табель / ЗП</a>
         <a href="#" onclick="goHome();return false;">Выйти</a>
       </div>
     </div>
@@ -83,6 +84,7 @@
           <th>Название</th>
           <th>Адрес</th>
           <th>Контрагент</th>
+          <th>Оплата/смена</th>
           <th>Обход</th>
           <th></th>
         </tr>
@@ -154,6 +156,9 @@ function renderTable() {
     var tdContractor = document.createElement('td');
     tdContractor.textContent = contractorName(o.contractorId);
 
+    var tdRate = document.createElement('td');
+    tdRate.textContent = o.contractorRate ? Number(o.contractorRate).toLocaleString('ru-RU') + ' ₸' : '—';
+
     var tdPatrol = document.createElement('td');
     var badge = document.createElement('span');
     badge.className = 'emp-badge';
@@ -180,6 +185,7 @@ function renderTable() {
     tr.appendChild(tdName);
     tr.appendChild(tdAddress);
     tr.appendChild(tdContractor);
+    tr.appendChild(tdRate);
     tr.appendChild(tdPatrol);
     tr.appendChild(tdActions);
     tbody.appendChild(tr);
@@ -226,6 +232,7 @@ function openForm(o) {
     '<div class="emp-field"><label>Название объекта</label><input id="fName" type="text" value="' + (o ? escapeAttr(o.name) : '') + '"></div>' +
     '<div class="emp-field"><label>Адрес</label><input id="fAddress" type="text" value="' + (o ? escapeAttr(o.address || '') : '') + '"></div>' +
     '<div class="emp-field"><label>Контрагент</label><select id="fContractor">' + contractorOptions + '</select></div>' +
+    '<div class="emp-field"><label>Оплата от контрагента за смену (₸)</label><input id="fContractorRate" type="number" min="0" step="500" value="' + (o ? (o.contractorRate || 0) : '0') + '"></div>' +
     '<div class="emp-checkbox-row"><input id="fPatrol" type="checkbox"' + (o && o.hasPatrol ? ' checked' : '') + '><label for="fPatrol" style="margin:0">Требуется обход по точкам</label></div>' +
     '<div class="emp-error" id="fError"></div>' +
     '<div class="emp-panel-actions">' +
@@ -251,6 +258,7 @@ function saveForm() {
   var name = document.getElementById('fName').value.trim();
   var address = document.getElementById('fAddress').value.trim();
   var contractorId = document.getElementById('fContractor').value;
+  var contractorRate = document.getElementById('fContractorRate').value;
   var hasPatrol = document.getElementById('fPatrol').checked;
   var errBox = document.getElementById('fError');
   errBox.textContent = '';
@@ -260,7 +268,7 @@ function saveForm() {
     return;
   }
 
-  var body = { name: name, address: address, contractorId: contractorId, hasPatrol: hasPatrol };
+  var body = { name: name, address: address, contractorId: contractorId, hasPatrol: hasPatrol, contractorRate: contractorRate };
 
   var request = editingId
     ? fetch('/api/objects/' + editingId, {
