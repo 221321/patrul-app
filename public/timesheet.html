@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Табель / ЗП — Патруль Р</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .emp-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
+  .emp-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px}
+  .emp-topbar-name{font-size:1.2rem;font-weight:800}
+  .emp-nav{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .emp-nav a{color:var(--muted);text-decoration:none;font-size:.95rem}
+  .emp-nav a:hover{color:var(--accent)}
+  .ts-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}
+  .ts-controls label{font-size:.85rem;color:var(--muted)}
+  .ts-controls input[type=date]{
+    padding:10px 12px;font-size:16px;border:1.5px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;
+  }
+  .ts-preset-btn{padding:9px 14px;font-size:.88rem;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;color:var(--ink);cursor:pointer;font-family:inherit}
+  .ts-preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .ts-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:26px}
+  .ts-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px 18px}
+  .ts-card-num{font-size:1.5rem;font-weight:800;line-height:1}
+  .ts-card-label{color:var(--muted);font-size:.85rem;margin-top:6px}
+  .ts-card.warn .ts-card-num{color:var(--accent)}
+  .ts-card.ok .ts-card-num{color:var(--ok)}
+
+  .ts-section{margin-bottom:28px}
+  .ts-section-title{font-size:1.05rem;font-weight:800;margin-bottom:12px}
+  .emp-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .emp-table th{text-align:left;font-size:.82rem;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;padding:12px 14px;border-bottom:1px solid var(--line);background:#FAFBFC}
+  .emp-table td{padding:12px 14px;border-bottom:1px solid var(--line);font-size:.95rem}
+  .emp-table tr:last-child td{border-bottom:none}
+  .emp-table tfoot td{font-weight:800;background:#FAFBFC;border-top:2px solid var(--line);border-bottom:none}
+  .emp-empty{color:var(--muted);text-align:center;padding:40px 0}
+  .ts-num{text-align:right}
+</style>
+</head>
+<body>
+  <div class="emp-wrap">
+    <div class="emp-topbar">
+      <div class="emp-topbar-name">Табель / ЗП</div>
+      <div class="emp-nav">
+        <a href="/dashboard.html">Сводка</a>
+        <a href="/photos.html">Фотоотчёты</a>
+        <a href="/employees.html">Сотрудники</a>
+        <a href="/contractors.html">Контрагенты</a>
+        <a href="/objects.html">Объекты</a>
+        <a href="/assignments.html">Смены</a>
+        <a href="/patrols.html">Обходы</a>
+        <a href="#" onclick="goHome();return false;">Выйти</a>
+      </div>
+    </div>
+
+    <div class="ts-controls">
+      <label>с</label>
+      <input type="date" id="fromDate" onchange="loadData()">
+      <label>по</label>
+      <input type="date" id="toDate" onchange="loadData()">
+      <button class="ts-preset-btn" onclick="setPreset('week')">Эта неделя</button>
+      <button class="ts-preset-btn" onclick="setPreset('month')">Этот месяц</button>
+    </div>
+
+    <div class="ts-cards" id="tsCards"></div>
+
+    <div class="ts-section">
+      <div class="ts-section-title">Оплата охранникам</div>
+      <table class="emp-table" id="guardsTable">
+        <thead>
+          <tr>
+            <th>ФИО</th>
+            <th class="ts-num">Смен</th>
+            <th class="ts-num">Ставка</th>
+            <th class="ts-num">К выплате</th>
+          </tr>
+        </thead>
+        <tbody id="guardsTbody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Итого к выплате</td>
+            <td class="ts-num" id="guardsTotalCell">0 ₸</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="emp-empty hidden" id="guardsEmpty">За этот период смен не было</div>
+    </div>
+
+    <div class="ts-section">
+      <div class="ts-section-title">Выставление контрагентам (по объектам)</div>
+      <table class="emp-table" id="objectsTable">
+        <thead>
+          <tr>
+            <th>Объект</th>
+            <th class="ts-num">Смен</th>
+            <th class="ts-num">Ставка</th>
+            <th class="ts-num">К выставлению</th>
+          </tr>
+        </thead>
+        <tbody id="objectsTbody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Итого к выставлению</td>
+            <td class="ts-num" id="objectsTotalCell">0 ₸</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="emp-empty hidden" id="objectsEmpty">За этот период смен не было</div>
+    </div>
+  </div>
+
+<script>
+function goHome() {
+  localStorage.removeItem('guardId');
+  localStorage.removeItem('guardName');
+  localStorage.removeItem('guardRole');
+  window.location.href = '/';
+}
+
+function fmtMoney(n) {
+  return Number(n || 0).toLocaleString('ru-RU') + ' ₸';
+}
+
+function isoDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function setPreset(type) {
+  var now = new Date();
+  var from, to;
+  if (type === 'week') {
+    var day = now.getDay() || 7; // Пн=1 ... Вс=7
+    from = new Date(now);
+    from.setDate(now.getDate() - day + 1);
+    to = now;
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = now;
+  }
+  document.getElementById('fromDate').value = isoDate(from);
+  document.getElementById('toDate').value = isoDate(to);
+  loadData();
+}
+
+function loadData() {
+  var from = document.getElementById('fromDate').value;
+  var to = document.getElementById('toDate').value;
+  if (!from || !to) return;
+  fetch('/api/timesheet?from=' + from + '&to=' + to)
+    .then(function (r) { return r.json(); })
+    .then(render);
+}
+
+function render(data) {
+  renderCards(data);
+  renderGuards(data.guards);
+  renderObjects(data.objects);
+}
+
+function renderCards(data) {
+  var cardsEl = document.getElementById('tsCards');
+  cardsEl.innerHTML = '';
+  var cards = [
+    { num: data.guards.reduce(function (s, g) { return s + g.shiftsCount; }, 0), label: 'Всего смен', cls: '' },
+    { num: fmtMoney(data.totals.guardsTotal), label: 'К выплате охранникам', cls: 'warn' },
+    { num: fmtMoney(data.totals.objectsTotal), label: 'К выставлению контрагентам', cls: 'ok' },
+    { num: fmtMoney(data.totals.profit), label: 'Маржа', cls: data.totals.profit >= 0 ? 'ok' : 'warn' }
+  ];
+  cards.forEach(function (c) {
+    var card = document.createElement('div');
+    card.className = 'ts-card' + (c.cls ? ' ' + c.cls : '');
+    var num = document.createElement('div');
+    num.className = 'ts-card-num';
+    num.textContent = c.num;
+    var label = document.createElement('div');
+    label.className = 'ts-card-label';
+    label.textContent = c.label;
+    card.appendChild(num);
+    card.appendChild(label);
+    cardsEl.appendChild(card);
+  });
+}
+
+function renderGuards(guards) {
+  var tbody = document.getElementById('guardsTbody');
+  var empty = document.getElementById('guardsEmpty');
+  var table = document.getElementById('guardsTable');
+  tbody.innerHTML = '';
+  var hasResults = guards.length > 0;
+  table.classList.toggle('hidden', !hasResults);
+  empty.classList.toggle('hidden', hasResults);
+
+  var total = 0;
+  guards.forEach(function (g) {
+    total += g.total;
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + g.name + '</td>' +
+      '<td class="ts-num">' + g.shiftsCount + '</td>' +
+      '<td class="ts-num">' + fmtMoney(g.rate) + '</td>' +
+      '<td class="ts-num">' + fmtMoney(g.total) + '</td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('guardsTotalCell').textContent = fmtMoney(total);
+}
+
+function renderObjects(objects) {
+  var tbody = document.getElementById('objectsTbody');
+  var empty = document.getElementById('objectsEmpty');
+  var table = document.getElementById('objectsTable');
+  tbody.innerHTML = '';
+  var hasResults = objects.length > 0;
+  table.classList.toggle('hidden', !hasResults);
+  empty.classList.toggle('hidden', hasResults);
+
+  var total = 0;
+  objects.forEach(function (o) {
+    total += o.total;
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + o.name + '</td>' +
+      '<td class="ts-num">' + o.shiftsCount + '</td>' +
+      '<td class="ts-num">' + fmtMoney(o.rate) + '</td>' +
+      '<td class="ts-num">' + fmtMoney(o.total) + '</td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('objectsTotalCell').textContent = fmtMoney(total);
+}
+
+setPreset('month');
+</script>
+</body>
+</html>
