@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Контрагенты — Патруль Р</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .emp-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
+  .emp-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px}
+  .emp-topbar-name{font-size:1.2rem;font-weight:800}
+  .emp-nav{display:flex;gap:16px;align-items:center}
+  .emp-nav a{color:var(--muted);text-decoration:none;font-size:.95rem}
+  .emp-nav a:hover{color:var(--accent)}
+  .emp-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}
+  .emp-controls input[type=search]{
+    flex:1;min-width:200px;padding:10px 12px;font-size:16px;
+    border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-family:inherit;
+  }
+  .emp-add-btn{padding:10px 18px;font-size:.95rem;font-weight:700;border-radius:10px;border:none;
+    background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .emp-add-btn:hover{background:var(--accent-dark)}
+  .emp-count{color:var(--muted);font-size:.9rem;margin-bottom:12px}
+
+  .emp-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .emp-table th{text-align:left;font-size:.82rem;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;padding:12px 14px;border-bottom:1px solid var(--line);background:#FAFBFC}
+  .emp-table td{padding:12px 14px;border-bottom:1px solid var(--line);font-size:.95rem}
+  .emp-table tr:last-child td{border-bottom:none}
+  .emp-row-inactive{opacity:.5}
+  .emp-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700}
+  .emp-badge.official{background:var(--ok-soft);color:var(--ok)}
+  .emp-badge.unofficial{background:var(--warn-soft);color:var(--warn)}
+  .emp-row-actions{display:flex;gap:8px}
+  .emp-icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;
+    padding:4px 8px;border-radius:6px;font-family:inherit}
+  .emp-icon-btn:hover{background:var(--accent-soft);color:var(--accent)}
+  .emp-empty{color:var(--muted);text-align:center;padding:50px 0}
+
+  .emp-overlay{position:fixed;inset:0;background:rgba(20,26,32,.55);
+    display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+  .emp-panel{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:420px;
+    box-shadow:var(--shadow-lift);display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow-y:auto}
+  .emp-panel-title{font-size:1.2rem;font-weight:800;margin-bottom:4px}
+  .emp-field label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px}
+  .emp-field input{
+    width:100%;padding:11px 13px;font-size:16px;border:1.5px solid var(--line);
+    border-radius:10px;background:#FBFCFD;color:var(--ink);font-family:inherit
+  }
+  .emp-panel-actions{display:flex;gap:10px;margin-top:10px}
+  .emp-panel-actions button{flex:1}
+  .emp-cancel-btn{background:#E7EBEE;color:var(--ink);padding:12px;border-radius:10px;border:none;
+    font-weight:700;cursor:pointer;font-family:inherit}
+  .emp-error{color:var(--warn);font-size:.88rem;min-height:18px}
+</style>
+</head>
+<body>
+  <div class="emp-wrap">
+    <div class="emp-topbar">
+      <div class="emp-topbar-name">Контрагенты</div>
+      <div class="emp-nav">
+        <a href="/photos.html">Фотоотчёты</a>
+        <a href="/employees.html">Сотрудники</a>
+        <a href="#" onclick="goHome();return false;">Выйти</a>
+      </div>
+    </div>
+
+    <div class="emp-controls">
+      <input type="search" id="empSearch" placeholder="Поиск по названию или БИН…" oninput="renderTable()">
+      <button class="emp-add-btn" onclick="openForm(null)">+ Добавить контрагента</button>
+    </div>
+
+    <div class="emp-count" id="empCount"></div>
+    <table class="emp-table" id="empTable">
+      <thead>
+        <tr>
+          <th>Название</th>
+          <th>БИН</th>
+          <th>Контактное лицо</th>
+          <th>Телефон</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="empTbody"></tbody>
+    </table>
+    <div class="emp-empty hidden" id="empEmpty">Контрагенты не найдены</div>
+  </div>
+
+<script>
+var allContractors = [];
+
+function goHome() {
+  localStorage.removeItem('guardId');
+  localStorage.removeItem('guardName');
+  localStorage.removeItem('guardRole');
+  window.location.href = '/';
+}
+
+function loadContractors() {
+  fetch('/api/contractors')
+    .then(function (r) { return r.json(); })
+    .then(function (list) {
+      allContractors = list;
+      renderTable();
+    });
+}
+
+function renderTable() {
+  var query = document.getElementById('empSearch').value.trim().toLowerCase();
+  var tbody = document.getElementById('empTbody');
+  var empty = document.getElementById('empEmpty');
+  var countEl = document.getElementById('empCount');
+  var table = document.getElementById('empTable');
+
+  var filtered = query
+    ? allContractors.filter(function (c) {
+        return c.name.toLowerCase().indexOf(query) !== -1 || (c.bin || '').indexOf(query) !== -1;
+      })
+    : allContractors;
+
+  countEl.textContent = allContractors.length
+    ? 'Показано ' + filtered.length + ' из ' + allContractors.length
+    : '';
+
+  tbody.innerHTML = '';
+  var hasResults = filtered.length > 0;
+  table.classList.toggle('hidden', !hasResults);
+  empty.classList.toggle('hidden', hasResults);
+
+  filtered.forEach(function (c) {
+    var tr = document.createElement('tr');
+    if (c.active === false) tr.className = 'emp-row-inactive';
+
+    var tdName = document.createElement('td');
+    tdName.textContent = c.name;
+
+    var tdBin = document.createElement('td');
+    tdBin.textContent = c.bin || '—';
+
+    var tdContact = document.createElement('td');
+    tdContact.textContent = c.contactName || '—';
+
+    var tdPhone = document.createElement('td');
+    tdPhone.textContent = c.contactPhone || '—';
+
+    var tdActions = document.createElement('td');
+    var actionsWrap = document.createElement('div');
+    actionsWrap.className = 'emp-row-actions';
+    var editBtn = document.createElement('button');
+    editBtn.className = 'emp-icon-btn';
+    editBtn.textContent = 'Изменить';
+    editBtn.onclick = function () { openForm(c); };
+    actionsWrap.appendChild(editBtn);
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.className = 'emp-icon-btn';
+    toggleBtn.textContent = c.active === false ? 'Восстановить' : 'В архив';
+    toggleBtn.onclick = function () { toggleActive(c); };
+    actionsWrap.appendChild(toggleBtn);
+
+    tdActions.appendChild(actionsWrap);
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdBin);
+    tr.appendChild(tdContact);
+    tr.appendChild(tdPhone);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  });
+}
+
+function toggleActive(c) {
+  var newActive = c.active === false ? true : false;
+  var label = newActive ? 'восстановить' : 'отправить в архив';
+  if (!confirm('Точно ' + label + ' контрагента «' + c.name + '»?')) return;
+
+  fetch('/api/contractors/' + c.id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ active: newActive })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function () { loadContractors(); });
+}
+
+var editingId = null;
+
+function openForm(c) {
+  editingId = c ? c.id : null;
+  var existing = document.getElementById('empOverlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'emp-overlay';
+  overlay.id = 'empOverlay';
+  overlay.onclick = function (e) { if (e.target === overlay) closeForm(); };
+
+  var panel = document.createElement('div');
+  panel.className = 'emp-panel';
+
+  panel.innerHTML =
+    '<div class="emp-panel-title">' + (c ? 'Изменить контрагента' : 'Новый контрагент') + '</div>' +
+    '<div class="emp-field"><label>Название компании</label><input id="fName" type="text" value="' + (c ? escapeAttr(c.name) : '') + '"></div>' +
+    '<div class="emp-field"><label>БИН</label><input id="fBin" type="text" value="' + (c ? escapeAttr(c.bin || '') : '') + '"></div>' +
+    '<div class="emp-field"><label>Адрес</label><input id="fAddress" type="text" value="' + (c ? escapeAttr(c.address || '') : '') + '"></div>' +
+    '<div class="emp-field"><label>Контактное лицо</label><input id="fContactName" type="text" value="' + (c ? escapeAttr(c.contactName || '') : '') + '"></div>' +
+    '<div class="emp-field"><label>Телефон контакта</label><input id="fContactPhone" type="tel" value="' + (c ? escapeAttr(c.contactPhone || '') : '') + '"></div>' +
+    '<div class="emp-error" id="fError"></div>' +
+    '<div class="emp-panel-actions">' +
+      '<button class="emp-cancel-btn" onclick="closeForm()">Отмена</button>' +
+      '<button class="btn btn-main" style="flex:1" onclick="saveForm()">Сохранить</button>' +
+    '</div>';
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/"/g, '&quot;');
+}
+
+function closeForm() {
+  var existing = document.getElementById('empOverlay');
+  if (existing) existing.remove();
+  editingId = null;
+}
+
+function saveForm() {
+  var name = document.getElementById('fName').value.trim();
+  var bin = document.getElementById('fBin').value.trim();
+  var address = document.getElementById('fAddress').value.trim();
+  var contactName = document.getElementById('fContactName').value.trim();
+  var contactPhone = document.getElementById('fContactPhone').value.trim();
+  var errBox = document.getElementById('fError');
+  errBox.textContent = '';
+
+  if (!name) {
+    errBox.textContent = 'Название компании обязательно';
+    return;
+  }
+
+  var body = { name: name, bin: bin, address: address, contactName: contactName, contactPhone: contactPhone };
+
+  var request = editingId
+    ? fetch('/api/contractors/' + editingId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+    : fetch('/api/contractors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+  request
+    .then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.error); });
+      return r.json();
+    })
+    .then(function () { closeForm(); loadContractors(); })
+    .catch(function (e) { errBox.textContent = e.message; });
+}
+
+loadContractors();
+</script>
+</body>
+</html>
