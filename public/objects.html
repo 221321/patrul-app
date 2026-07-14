@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Объекты — Патруль Р</title>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   .emp-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
   .emp-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px}
@@ -54,6 +55,18 @@
   .emp-cancel-btn{background:#E7EBEE;color:var(--ink);padding:12px;border-radius:10px;border:none;
     font-weight:700;cursor:pointer;font-family:inherit}
   .emp-error{color:var(--warn);font-size:.88rem;min-height:18px}
+
+  .qr-panel{max-width:520px}
+  .qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;margin-top:6px}
+  .qr-card{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;background:#FBFCFD}
+  .qr-card canvas,.qr-card img{margin:0 auto}
+  .qr-card-label{font-size:.82rem;color:var(--ink);margin-top:8px;font-weight:600;line-height:1.3}
+  .qr-empty{color:var(--muted);text-align:center;padding:20px 0}
+  @media print{
+    body *{visibility:hidden}
+    .qr-print-area,.qr-print-area *{visibility:visible}
+    .qr-print-area{position:absolute;top:0;left:0;width:100%}
+  }
 </style>
 </head>
 <body>
@@ -195,6 +208,14 @@ function renderTable() {
     toggleBtn.onclick = function () { toggleActive(o); };
     actionsWrap.appendChild(toggleBtn);
 
+    if (o.hasPatrol) {
+      var qrBtn = document.createElement('button');
+      qrBtn.className = 'emp-icon-btn';
+      qrBtn.textContent = 'QR-коды';
+      qrBtn.onclick = function () { openQrPanel(o); };
+      actionsWrap.appendChild(qrBtn);
+    }
+
     tdActions.appendChild(actionsWrap);
 
     tr.appendChild(tdName);
@@ -304,6 +325,54 @@ function saveForm() {
     })
     .then(function () { closeForm(); loadData(); })
     .catch(function (e) { errBox.textContent = e.message; });
+}
+
+function openQrPanel(o) {
+  var existing = document.getElementById('empOverlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'emp-overlay';
+  overlay.id = 'empOverlay';
+  overlay.onclick = function (e) { if (e.target === overlay) closeForm(); };
+
+  var panel = document.createElement('div');
+  panel.className = 'emp-panel qr-panel';
+
+  var items = [];
+  if (o.entranceQr) {
+    items.push({ token: 'PTRL:' + o.id + ':entrance', label: 'Вход на объект' });
+  }
+  (o.checkpoints || []).forEach(function (cp) {
+    items.push({ token: 'PTRL:' + o.id + ':' + cp.id, label: cp.name });
+  });
+
+  panel.innerHTML =
+    '<div class="emp-panel-title">QR-коды — ' + escapeAttr(o.name) + '</div>' +
+    (items.length
+      ? '<div class="qr-print-area"><div class="qr-grid" id="qrGrid"></div></div>'
+      : '<div class="qr-empty">Для этого объекта не заданы точки обхода</div>') +
+    '<div class="emp-panel-actions">' +
+      '<button class="emp-cancel-btn" onclick="closeForm()">Закрыть</button>' +
+      (items.length ? '<button class="btn btn-main" style="flex:1" onclick="window.print()">Печать</button>' : '') +
+    '</div>';
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  var grid = document.getElementById('qrGrid');
+  items.forEach(function (item) {
+    var card = document.createElement('div');
+    card.className = 'qr-card';
+    var qrBox = document.createElement('div');
+    card.appendChild(qrBox);
+    var label = document.createElement('div');
+    label.className = 'qr-card-label';
+    label.textContent = item.label;
+    card.appendChild(label);
+    grid.appendChild(card);
+    new QRCode(qrBox, { text: item.token, width: 120, height: 120 });
+  });
 }
 
 loadData();
