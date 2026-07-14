@@ -43,9 +43,10 @@
 </head>
 <body>
   <div class="dash-wrap">
-    <div class="dash-topbar">
+    <div class="dash-topbar site-topbar">
       <div class="dash-topbar-name">Сводка на день</div>
-      <div class="dash-nav">
+      <button class="site-nav-toggle" id="navToggle" onclick="toggleNav()">☰</button>
+      <div class="site-nav" id="siteNav">
         <a href="/photos.html">Фотоотчёты</a>
         <a href="/employees.html">Сотрудники</a>
         <a href="/contractors.html">Контрагенты</a>
@@ -91,6 +92,18 @@ function goHome() {
   localStorage.removeItem('guardRole');
   window.location.href = '/';
 }
+
+function toggleNav() {
+  var nav = document.getElementById('siteNav');
+  if (nav) nav.classList.toggle('open');
+}
+document.addEventListener('click', function (e) {
+  var nav = document.getElementById('siteNav');
+  var toggle = document.getElementById('navToggle');
+  if (nav && nav.classList.contains('open') && !nav.contains(e.target) && e.target !== toggle) {
+    nav.classList.remove('open');
+  }
+});
 
 function currentDate() {
   return document.getElementById('dashDate').value;
