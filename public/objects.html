@@ -177,3 +177,110 @@ function renderTable() {
     tr.appendChild(tdName);
     tr.appendChild(tdAddress);
     tr.appendChild(tdContractor);
+    tr.appendChild(tdPatrol);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  });
+}
+
+function toggleActive(o) {
+  var newActive = o.active === false ? true : false;
+  var label = newActive ? 'восстановить' : 'отправить в архив';
+  if (!confirm('Точно ' + label + ' объект «' + o.name + '»?')) return;
+
+  fetch('/api/objects/' + o.id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ active: newActive })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function () { loadData(); });
+}
+
+var editingId = null;
+
+function openForm(o) {
+  editingId = o ? o.id : null;
+  var existing = document.getElementById('empOverlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'emp-overlay';
+  overlay.id = 'empOverlay';
+  overlay.onclick = function (e) { if (e.target === overlay) closeForm(); };
+
+  var panel = document.createElement('div');
+  panel.className = 'emp-panel';
+
+  var contractorOptions = '<option value="">Без контрагента</option>' +
+    allContractors.map(function (c) {
+      var selected = (o && o.contractorId === c.id) ? ' selected' : '';
+      return '<option value="' + c.id + '"' + selected + '>' + escapeAttr(c.name) + '</option>';
+    }).join('');
+
+  panel.innerHTML =
+    '<div class="emp-panel-title">' + (o ? 'Изменить объект' : 'Новый объект') + '</div>' +
+    '<div class="emp-field"><label>Название объекта</label><input id="fName" type="text" value="' + (o ? escapeAttr(o.name) : '') + '"></div>' +
+    '<div class="emp-field"><label>Адрес</label><input id="fAddress" type="text" value="' + (o ? escapeAttr(o.address || '') : '') + '"></div>' +
+    '<div class="emp-field"><label>Контрагент</label><select id="fContractor">' + contractorOptions + '</select></div>' +
+    '<div class="emp-checkbox-row"><input id="fPatrol" type="checkbox"' + (o && o.hasPatrol ? ' checked' : '') + '><label for="fPatrol" style="margin:0">Требуется обход по точкам</label></div>' +
+    '<div class="emp-error" id="fError"></div>' +
+    '<div class="emp-panel-actions">' +
+      '<button class="emp-cancel-btn" onclick="closeForm()">Отмена</button>' +
+      '<button class="btn btn-main" style="flex:1" onclick="saveForm()">Сохранить</button>' +
+    '</div>';
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/"/g, '&quot;');
+}
+
+function closeForm() {
+  var existing = document.getElementById('empOverlay');
+  if (existing) existing.remove();
+  editingId = null;
+}
+
+function saveForm() {
+  var name = document.getElementById('fName').value.trim();
+  var address = document.getElementById('fAddress').value.trim();
+  var contractorId = document.getElementById('fContractor').value;
+  var hasPatrol = document.getElementById('fPatrol').checked;
+  var errBox = document.getElementById('fError');
+  errBox.textContent = '';
+
+  if (!name) {
+    errBox.textContent = 'Название объекта обязательно';
+    return;
+  }
+
+  var body = { name: name, address: address, contractorId: contractorId, hasPatrol: hasPatrol };
+
+  var request = editingId
+    ? fetch('/api/objects/' + editingId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+    : fetch('/api/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+  request
+    .then(function (r) {
+      if (!r.ok) return r.json().then(function (e) { throw new Error(e.error); });
+      return r.json();
+    })
+    .then(function () { closeForm(); loadData(); })
+    .catch(function (e) { errBox.textContent = e.message; });
+}
+
+loadData();
+</script>
+</body>
+</html>
