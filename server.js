@@ -32,10 +32,68 @@ app.post('/api/login', (req, res) => {
   if (!guard) {
     return res.status(401).json({ error: 'Неверный телефон или PIN' });
   }
+  if (guard.active === false) {
+    return res.status(403).json({ error: 'Учётная запись деактивирована' });
+  }
   res.json({ id: guard.id, name: guard.name, role: guard.role || 'guard' });
 });
 
 // ---------- СЕГОДНЯШНЕЕ НАЗНАЧЕНИЕ ----------
+// ---------- СОТРУДНИКИ (КАДРЫ) ----------
+app.get('/api/employees', (req, res) => {
+  const employees = db.get('guards').value().map((g) => ({
+    id: g.id,
+    name: g.name,
+    phone: g.phone,
+    role: g.role || 'guard',
+    position: g.position || 'Охранник',
+    official: g.official !== false,
+    active: g.active !== false
+  }));
+  res.json(employees);
+});
+
+app.post('/api/employees', (req, res) => {
+  const { name, phone, pin, role, position, official } = req.body || {};
+  if (!name || !phone || !pin) {
+    return res.status(400).json({ error: 'ФИО, телефон и PIN обязательны' });
+  }
+  const existing = db.get('guards').find({ phone }).value();
+  if (existing) {
+    return res.status(409).json({ error: 'Сотрудник с таким телефоном уже существует' });
+  }
+  const employee = {
+    id: 'g_' + Date.now(),
+    name,
+    phone,
+    pin,
+    role: role === 'manager' ? 'manager' : 'guard',
+    position: position || 'Охранник',
+    official: official !== false,
+    active: true
+  };
+  db.get('guards').push(employee).write();
+  res.json(employee);
+});
+
+app.put('/api/employees/:id', (req, res) => {
+  const { id } = req.params;
+  const guard = db.get('guards').find({ id }).value();
+  if (!guard) {
+    return res.status(404).json({ error: 'Сотрудник не найден' });
+  }
+  const { name, phone, pin, role, position, official, active } = req.body || {};
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (phone !== undefined) updates.phone = phone;
+  if (pin !== undefined && pin !== '') updates.pin = pin;
+  if (role !== undefined) updates.role = role === 'manager' ? 'manager' : 'guard';
+  if (position !== undefined) updates.position = position;
+  if (official !== undefined) updates.official = !!official;
+  if (active !== undefined) updates.active = !!active;
+  db.get('guards').find({ id }).assign(updates).write();
+  res.json(db.get('guards').find({ id }).value());
+});
 app.get('/api/me/:guardId/today', (req, res) => {
   const { guardId } = req.params;
   const assignment = db.get('assignments')
