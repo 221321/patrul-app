@@ -52,7 +52,7 @@ api('POST', '/api/login', { phone: phone, pin: pin })
       localStorage.setItem('guardName', guard.name);
       localStorage.setItem('guardRole', guard.role || 'guard');
       if (guard.role === 'manager') {
-        window.location.href = '/photos.html';
+        window.location.href = '/dashboard.html';
         return;
       }
       enterMain();
@@ -276,7 +276,7 @@ function backToMain() {
 // ---------- СТАРТ ----------
 if (state.guardId) {
   if (localStorage.getItem('guardRole') === 'manager') {
-    window.location.href = '/photos.html';
+    window.location.href = '/dashboard.html';
   } else {
     enterMain();
   }
